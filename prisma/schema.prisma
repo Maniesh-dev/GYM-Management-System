@@ -1,0 +1,129 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum Role {
+  OWNER
+  TRAINER
+  RECEPTION
+}
+
+enum MemberStatus {
+  ACTIVE
+  EXPIRED
+  FROZEN
+  CANCELLED
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  CARD
+  CHEQUE
+}
+
+model Gym {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  members   Member[]
+  plans     Plan[]
+}
+
+model User {
+  id               String           @id @default(cuid())
+  name             String
+  email            String           @unique
+  passwordHash     String
+  role             Role
+  phone            String?
+  gymId            String
+  gym              Gym              @relation(fields: [gymId], references: [id])
+  qrToken          String           @unique @default(cuid())
+  createdAt        DateTime         @default(now())
+  assignedMembers  Member[]         @relation("TrainerMembers")
+  recordedPayments Payment[]        @relation("RecordedBy")
+  trainerCheckins  TrainerCheckin[]
+}
+
+model TrainerCheckin {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  gymId      String
+  checkedAt  DateTime  @default(now())
+  type       String    @default("IN") // IN or OUT
+  method     String    @default("QR") // QR or MANUAL
+  status     String    @default("APPROVED") // APPROVED or PENDING
+}
+
+model Plan {
+  id           String    @id @default(cuid())
+  gymId        String
+  gym          Gym       @relation(fields: [gymId], references: [id])
+  name         String
+  durationDays Int
+  price        Float
+  isActive     Boolean   @default(true)
+  members      Member[]
+  createdAt    DateTime  @default(now())
+}
+
+model Member {
+  id               String       @id @default(cuid())
+  gymId            String
+  gym              Gym          @relation(fields: [gymId], references: [id])
+  name             String
+  phone            String
+  email            String?
+  photoUrl         String?
+  dob              DateTime?
+  address          String?
+  emergencyContact String?
+  planId           String
+  plan             Plan         @relation(fields: [planId], references: [id])
+  trainerId        String?
+  trainer          User?        @relation("TrainerMembers", fields: [trainerId], references: [id])
+  status           MemberStatus @default(ACTIVE)
+  qrToken          String       @unique @default(cuid())
+  joinDate         DateTime     @default(now())
+  expiryDate       DateTime
+  frozenUntil      DateTime?
+  payments         Payment[]
+  checkins         Checkin[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Payment {
+  id           String      @id @default(cuid())
+  memberId     String
+  member       Member      @relation(fields: [memberId], references: [id])
+  recordedById String
+  recordedBy   User        @relation("RecordedBy", fields: [recordedById], references: [id])
+  planId       String
+  amount       Float
+  mode         PaymentMode
+  referenceNo  String?
+  note         String?
+  paidAt       DateTime    @default(now())
+  createdAt    DateTime    @default(now())
+}
+
+model Checkin {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  checkedAt DateTime @default(now())
+  method    String   @default("QR")
+}
