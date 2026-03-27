@@ -12,12 +12,13 @@ const MODE_STYLE: Record<string, React.CSSProperties> = {
 }
 
 export default async function BillingPage({
-    searchParams,
+    searchParams: searchParamsPromise,
 }: {
-    searchParams: { memberId?: string }
+    searchParams: Promise<{ memberId?: string }>
 }) {
     const session = await auth()
     const gymId = session!.user.gymId
+    const searchParams = await searchParamsPromise
     const memberId = searchParams.memberId
 
     const [payments, members, plans] = await Promise.all([

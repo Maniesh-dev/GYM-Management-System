@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getISTStartOfDay, getISTDate } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
     try {
@@ -17,6 +18,8 @@ export async function POST(req: NextRequest) {
             )
         }
 
+        const now = getISTDate()
+
         // ── TRAINER scan ────────────────────────────────────────────────
         if (type === 'trainer') {
             const user = await prisma.user.findUnique({
@@ -33,8 +36,7 @@ export async function POST(req: NextRequest) {
                 )
             }
 
-            const todayStart = new Date()
-            todayStart.setHours(0, 0, 0, 0)
+            const todayStart = getISTStartOfDay()
 
             const lastLog = await prisma.trainerCheckin.findFirst({
                 where: { userId: user.id, checkedAt: { gte: todayStart } },
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest) {
                 })
             }
 
-            if (member.status !== 'ACTIVE' || member.expiryDate < new Date()) {
+            if (member.status !== 'ACTIVE' || member.expiryDate < now) {
                 return NextResponse.json({
                     status: 'EXPIRED',
                     scanType: 'MEMBER',

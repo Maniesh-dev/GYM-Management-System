@@ -1,20 +1,20 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { ApproveButton } from '@/components/staff/ApproveButton'
+import { getISTDateString, getISTDayBoundaries } from '@/lib/utils'
 
 export default async function AttendancePage({
-    searchParams,
+    searchParams: searchParamsPromise,
 }: {
-    searchParams: { date?: string; userId?: string }
+    searchParams: Promise<{ date?: string; userId?: string }>
 }) {
     const session = await auth()
     const gymId = session!.user.gymId
+    const searchParams = await searchParamsPromise
 
-    const dateStr = searchParams.date ?? new Date().toISOString().split('T')[0]
-    const dayStart = new Date(dateStr)
-    dayStart.setHours(0, 0, 0, 0)
-    const dayEnd = new Date(dateStr)
-    dayEnd.setHours(23, 59, 59, 999)
+    // Get current date string in IST if no date selected
+    const dateStr = searchParams.date ?? getISTDateString()
+    const { dayStart, dayEnd } = getISTDayBoundaries(dateStr)
 
     const [logs, staff] = await Promise.all([
         prisma.trainerCheckin.findMany({
@@ -40,8 +40,11 @@ export default async function AttendancePage({
         hoursWorked: number
     }> = {}
 
-    // Initialize with all staff members so they appear even without logs
+    // Initialize with selected staff member(s)
     staff.forEach(s => {
+        // If a specific user is selected, only initialize for that user
+        if (searchParams.userId && s.id !== searchParams.userId) return;
+
         byUser[s.id] = {
             name: s.name, role: s.role,
             logs: [], hoursWorked: 0,

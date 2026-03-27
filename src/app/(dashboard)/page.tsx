@@ -1,20 +1,23 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getISTStartOfDay, getISTDate } from '@/lib/utils'
 import { KPICard } from '@/components/dashboard/KPICard'
 import { ExpiringList } from '@/components/dashboard/ExpiringList'
 import { RecentCheckins } from '@/components/dashboard/RecentCheckins'
 import { QuickActions } from '@/components/dashboard/QuickActions'
+import { Clock } from '@/components/dashboard/Clock'
 
 export default async function DashboardPage() {
   const session = await auth()
   const gymId = session!.user.gymId
-  const now = new Date()
+
+  // Use IST-corrected current date for display/greeting
+  const now = getISTDate()
+  // Use UTC Date that corresponds to 00:00:00 IST for Prisma queries
+  const todayStart = getISTStartOfDay()
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-  const todayStart = new Date(now)
-  todayStart.setHours(0, 0, 0, 0)
 
   const [
     totalMembers,
@@ -67,14 +70,16 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground m-0 mb-1">
           {greeting}, {session!.user.name?.split(' ')[0]} 👋
         </h1>
-        <p className="text-sm text-muted-foreground m-0">
-          {now.toLocaleDateString('en-IN', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
-        </p>
+        <div className="flex items-center text-sm text-muted-foreground m-0">
+          <span>
+            {now.toLocaleDateString('en-IN', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </span>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -113,11 +118,10 @@ export default async function DashboardPage() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-[15px] font-bold text-foreground m-0 flex items-center">
               Expiring this week
-              <span className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                expiringSoon.length > 0 
-                  ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400' 
+              <span className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${expiringSoon.length > 0
+                  ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'
                   : 'bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400'
-              }`}>
+                }`}>
                 {expiringSoon.length}
               </span>
             </h2>

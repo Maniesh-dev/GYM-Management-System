@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { MemberTable } from '@/components/members/MemberTable'
 
 export default async function MembersPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { search?: string; status?: string }
+  searchParams: Promise<{ search?: string; status?: string }>
 }) {
   const session = await auth()
   const gymId = session!.user.gymId
+  const searchParams = await searchParamsPromise
   const search = searchParams.search ?? ''
   const status = searchParams.status ?? ''
 

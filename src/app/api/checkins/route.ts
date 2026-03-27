@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withRole } from '@/lib/withRole'
 import { prisma } from '@/lib/db'
+import { getISTStartOfDay } from '@/lib/utils'
 
 export const POST = withRole('checkins:write', async (req, { session }) => {
     const { memberId } = await req.json()
@@ -19,8 +20,7 @@ export const POST = withRole('checkins:write', async (req, { session }) => {
 
 export const GET = withRole('checkins:read', async (req, { session }) => {
     const gymId = session!.user.gymId
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
+    const todayStart = getISTStartOfDay()
 
     const checkins = await prisma.checkin.findMany({
         where: { member: { gymId }, checkedAt: { gte: todayStart } },

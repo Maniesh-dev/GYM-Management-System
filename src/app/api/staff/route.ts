@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withRole } from '@/lib/withRole'
 import { prisma } from '@/lib/db'
+import { getISTStartOfDay } from '@/lib/utils'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
@@ -16,6 +17,7 @@ type StaffRole = 'TRAINER' | 'RECEPTION'
 
 export const GET = withRole('staff:manage', async (req, { session }) => {
     const role = new URL(req.url).searchParams.get('role')
+    const todayStart = getISTStartOfDay()
 
     const staff = await prisma.user.findMany({
         where: {
@@ -27,7 +29,7 @@ export const GET = withRole('staff:manage', async (req, { session }) => {
             phone: true, qrToken: true, createdAt: true,
             assignedMembers: { select: { id: true } },
             trainerCheckins: {
-                where: { checkedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+                where: { checkedAt: { gte: todayStart } },
                 orderBy: { checkedAt: 'desc' },
                 take: 1,
             },
