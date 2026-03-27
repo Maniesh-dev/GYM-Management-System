@@ -97,8 +97,6 @@ function ReceiptDoc({ d }: { d: ReceiptData }) {
     )
 }
 
-export async function generateReceiptPDF(data: ReceiptData): Promise<Buffer> {
-    const blob = await pdf(<ReceiptDoc d={ data } />).toBlob()
-    const arrayBuffer = await blob.arrayBuffer()
-    return Buffer.from(arrayBuffer)
+export async function generateReceiptPDF(data: ReceiptData): Promise<Blob> {
+    return pdf(<ReceiptDoc d={ data } />).toBlob()
 }

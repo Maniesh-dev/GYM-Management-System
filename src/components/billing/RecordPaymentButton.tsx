@@ -1,5 +1,5 @@
 'use client'
-import { PaymentFormDialog } from './PaymentFormDialog'
+import { PaymentFormDialog } from './PaymentForm'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())

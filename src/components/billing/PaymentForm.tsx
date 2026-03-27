@@ -177,7 +177,7 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
                                     form.setValue('memberId', '') // clear form value
                                     setShowSuggestions(true)
                                 }}
-                                className='cursor-pointer w-full bg-red-500'
+                                className='cursor-pointer w-full'
                             />
                             {showSuggestions && (
                                 <div className="absolute z-50 w-full mt-1 bg-white border border-zinc-200 rounded-md shadow-md max-h-60 overflow-auto">

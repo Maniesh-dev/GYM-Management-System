@@ -15,7 +15,7 @@ export function RevenueChart({ data }: { data: { month: string; amount: number }
                     tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`}
                 />
                 <Tooltip
-                    formatter={(v: number) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']}
+                    formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
                     contentStyle={{ fontSize: 12, borderRadius: 8, border: '0.5px solid #e0e0e0' }}
                 />
                 <Bar dataKey="amount" fill="#534AB7" radius={[4, 4, 0, 0]} />

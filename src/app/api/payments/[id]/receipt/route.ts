@@ -42,7 +42,7 @@ export const GET = withRole('billing:read', async (req, { session }) => {
         recordedBy: payment.recordedBy.name,
     })
 
-    return new NextResponse(buf, {
+    return new NextResponse(buf as any, {
         headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `inline; filename="${receiptNo}.pdf"`,
