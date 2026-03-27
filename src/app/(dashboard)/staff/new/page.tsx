@@ -85,7 +85,7 @@ export default function NewStaffPage() {
 
                 <div style={field}>
                     <Label>Email *</Label>
-                    <Input {...form.register('email')} type="email" placeholder="amit@fitzone.com" />
+                    <Input {...form.register('email')} type="email" placeholder="amit@Fight Club.com" />
                     {form.formState.errors.email && (
                         <p style={err}>{form.formState.errors.email.message}</p>
                     )}

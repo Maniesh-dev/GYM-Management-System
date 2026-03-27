@@ -90,7 +90,13 @@ export default function KioskPage() {
 
             <div style={{
                 minHeight: '100vh',
-                background: '#0f172a',
+                background: 'url(/bg.jpg)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backdropFilter: 'blur(10px)',
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -99,9 +105,9 @@ export default function KioskPage() {
             }}>
 
                 {/* Header */}
-                <div style={{ textAlign: 'center' }}>
+                <div style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
                     <p style={{ color: '#f1f5f9', fontSize: 22, fontWeight: 800, letterSpacing: -.5, margin: '0 0 4px' }}>
-                        FitZone
+                        Fight Club
                     </p>
                     <p style={{ color: '#475569', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', margin: 0 }}>
                         Entry Scanner

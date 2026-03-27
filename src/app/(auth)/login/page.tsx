@@ -73,7 +73,10 @@ export default function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '20px',
-                background: '#f5f5f3',
+                background: 'url(/bg.jpg)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
             }}>
                 <div style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -83,6 +86,9 @@ export default function LoginPage() {
                         borderRadius: 16,
                         border: '1px solid #e5e7eb',
                         padding: '40px 36px',
+                        backdropFilter: 'blur(10px)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                     }}>
 
                         {/* Logo */}
@@ -96,10 +102,10 @@ export default function LoginPage() {
                                 justifyContent: 'center',
                                 margin: '0 auto 14px',
                             }}>
-                                <span style={{ color: '#fff', fontSize: 24, fontWeight: 900 }}>F</span>
+                                <span style={{ color: '#fff', fontSize: 24, fontWeight: 900 }}>FC</span>
                             </div>
                             <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 6 }}>
-                                Fight Club Jaipur
+                                Fight Club
                             </h1>
                             <p style={{ fontSize: 14, color: '#6b7280' }}>
                                 Sign in to your dashboard
