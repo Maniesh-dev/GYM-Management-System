@@ -53,7 +53,12 @@ export const {
                         return null
                     }
 
-                    console.log('[authorize] user found, checking password...')
+                    if (!user.isActive) {
+                        console.log('[authorize] user is terminated/inactive:', email)
+                        return null
+                    }
+
+                    console.log('[authorize] user found and active, checking password...')
 
                     const valid = await bcrypt.compare(password, user.passwordHash)
 

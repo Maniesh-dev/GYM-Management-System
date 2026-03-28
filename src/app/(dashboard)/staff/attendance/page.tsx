@@ -142,11 +142,14 @@ export default async function AttendancePage({
                         <div key={userId} className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <h3 className="text-[15px] font-bold text-foreground">{data.name}</h3>
+                                    <p className="text-[15px] font-bold text-foreground">{data.name}</p>
                                     <span className={`
                                         inline-block mt-1 text-[10px] uppercase font-black px-2 py-0.5 rounded-md border
-                                        ${data.role === 'TRAINER' 
-                                            ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400' 
+                                        ${data.role === 'TRAINER'
+                                            ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400'
+                                            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400'}
+                                        ${data.role === 'RECEPTIONIST'
+                                            ? 'bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800 text-green-700 dark:text-green-400'
                                             : 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400'}
                                     `}>
                                         {data.role}
@@ -170,8 +173,8 @@ export default async function AttendancePage({
                                     data.logs.map((l, i) => (
                                         <div key={i} className={`
                                             flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border
-                                            ${l.type === 'IN' 
-                                                ? 'bg-[#1D9E7510] border-[#1D9E7530] text-[#1D9E75]' 
+                                            ${l.type === 'IN'
+                                                ? 'bg-[#1D9E7510] border-[#1D9E7530] text-[#1D9E75]'
                                                 : 'bg-[#185FA510] border-[#185FA530] text-[#185FA5]'}
                                             ${l.status === 'PENDING' ? 'opacity-70 border-dashed border-[#BA751750]' : ''}
                                         `}>
@@ -179,7 +182,7 @@ export default async function AttendancePage({
                                             <span>{l.type}</span>
                                             <span className="opacity-60 tabular-nums">{fmt(l.checkedAt)}</span>
                                             {l.method === 'MANUAL' && <span className="opacity-40 text-[10px]" title="Manual Entry">✎</span>}
-                                            
+
                                             {l.status === 'PENDING' && (
                                                 <div className="flex items-center gap-2 pl-2 border-l border-[#BA751730] ml-1">
                                                     <span className="text-[10px] text-[#BA7517] font-black uppercase tracking-tighter">Pending</span>

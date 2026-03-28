@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,18 +36,29 @@ export default function NewStaffPage() {
     async function onSubmit(values: FormValues) {
         setSaving(true)
         setError('')
-        const res = await fetch('/api/staff', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(values),
-        })
-        const data = await res.json()
-        if (!res.ok) {
-            setError(data.error ?? 'Failed to add staff')
-            setSaving(false)
-        } else {
+        try {
+            const res = await fetch('/api/staff', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(values),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                const message = data.error ?? 'Failed to add staff'
+                setError(message)
+                toast.error(message)
+                return
+            }
+
+            toast.success('Staff member added successfully')
             router.push('/dashboard/staff')
             router.refresh()
+        } catch {
+            const message = 'Network error while adding staff'
+            setError(message)
+            toast.error(message)
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -63,7 +75,7 @@ export default function NewStaffPage() {
                 <div style={grid2}>
                     <div style={field}>
                         <Label>Full name *</Label>
-                        <Input {...form.register('name')} placeholder="Amit Singh" />
+                        <Input {...form.register('name')} placeholder="Enter staff full name" />
                         {form.formState.errors.name && (
                             <p style={err}>{form.formState.errors.name.message}</p>
                         )}
@@ -85,7 +97,7 @@ export default function NewStaffPage() {
 
                 <div style={field}>
                     <Label>Email *</Label>
-                    <Input {...form.register('email')} type="email" placeholder="amit@Fight Club.com" />
+                    <Input {...form.register('email')} type="email" placeholder="Enter staff email" />
                     {form.formState.errors.email && (
                         <p style={err}>{form.formState.errors.email.message}</p>
                     )}
@@ -101,7 +113,7 @@ export default function NewStaffPage() {
                     </div>
                     <div style={field}>
                         <Label>Phone</Label>
-                        <Input {...form.register('phone')} placeholder="9876543210" maxLength={10} />
+                        <Input {...form.register('phone')} placeholder="Enter staff phone number" maxLength={10} />
                     </div>
                 </div>
 

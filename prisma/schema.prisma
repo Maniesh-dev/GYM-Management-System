@@ -50,6 +50,7 @@ model User {
   gymId            String
   gym              Gym              @relation(fields: [gymId], references: [id])
   qrToken          String           @unique @default(cuid())
+  isActive         Boolean          @default(true)
   createdAt        DateTime         @default(now())
   assignedMembers  Member[]         @relation("TrainerMembers")
   recordedPayments Payment[]        @relation("RecordedBy")

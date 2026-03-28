@@ -84,6 +84,25 @@ export const POST = withRole('checkins:write', async (req, { session }) => {
         )
     }
 
+    // Block duplicate check-in for the same day (IST)
+    const todayStart = getISTStartOfDay()
+    const existingCheckin = await prisma.checkin.findFirst({
+        where: {
+            memberId,
+            checkedAt: { gte: todayStart },
+        },
+    })
+
+    if (existingCheckin) {
+        return NextResponse.json(
+            {
+                error: 'Already checked in today',
+                message: `Checked in at ${new Date(existingCheckin.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}. Entry restricted to once per day.`,
+            },
+            { status: 409 }
+        )
+    }
+
     const checkin = await prisma.checkin.create({
         data: { memberId, method: 'MANUAL' },
     })

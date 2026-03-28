@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import Link from 'next/link'
 
 export default async function CheckinsPage() {
     const session = await auth()
@@ -64,7 +65,11 @@ export default async function CheckinsPage() {
                             <p className="p-12 text-center text-muted-foreground text-sm">No check-ins yet</p>
                         ) : (
                             memberCheckins.map((c) => (
-                                <div key={c.id} className="flex justify-between items-center p-3.5 border-b border-border last:border-0">
+                                <Link 
+                                    href={`/members/${c.memberId}`} 
+                                    key={c.id} 
+                                    className="flex justify-between items-center p-3.5 border-b border-border last:border-0 hover:bg-muted/50 transition-colors"
+                                >
                                     <div className="min-w-0">
                                         <p className="font-semibold text-foreground text-sm truncate">{c.member.name}</p>
                                         <p className="text-[11px] text-muted-foreground truncate">
@@ -75,7 +80,7 @@ export default async function CheckinsPage() {
                                         <p className="text-sm font-medium text-foreground">{fmt(c.checkedAt)}</p>
                                         <p className="text-[10px] uppercase font-bold text-green-600 dark:text-green-400 mt-1">{c.method}</p>
                                     </div>
-                                </div>
+                                </Link>
                             ))
                         )}
                     </div>

@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { formatDate } from '@/lib/utils'
 import { TrainerQRCard } from '@/components/staff/TrainerQRCard'
+import { TerminateButton } from '@/components/staff/TerminateButton'
 import Link from 'next/link'
 
 export default async function StaffPage() {
@@ -9,7 +10,7 @@ export default async function StaffPage() {
     const gymId = session!.user.gymId
 
     const staff = await prisma.user.findMany({
-        where: { gymId, role: { in: ['TRAINER', 'RECEPTION'] } },
+        where: { gymId, role: { in: ['TRAINER', 'RECEPTION'] }, isActive: true },
         include: {
             assignedMembers: { select: { id: true } },
             trainerCheckins: {
@@ -81,8 +82,13 @@ export default async function StaffPage() {
                                 </div>
                             </div>
 
-                            <div className="w-full sm:w-auto flex justify-center sm:block pt-4 sm:pt-0 border-t sm:border-t-0 border-border/50">
+                            <div className="w-full sm:w-auto flex flex-col justify-center sm:block pt-4 sm:pt-0 border-t sm:border-t-0 border-border/50 gap-3">
                                 <TrainerQRCard qrToken={s.qrToken} name={s.name} />
+                                {session?.user?.role === 'OWNER' && (
+                                    <div className="mt-3 flex justify-center sm:justify-end">
+                                        <TerminateButton staffId={s.id} staffName={s.name} />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )

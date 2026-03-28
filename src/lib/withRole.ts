@@ -13,10 +13,10 @@ type SessionWithUser = {
 } | null
 
 type Ctx = { session: SessionWithUser }
-type Handler = (req: NextRequest, ctx: Ctx) => Promise<Response>
+type Handler = (req: NextRequest, ctx: any) => Promise<Response>
 
 export function withRole(permission: Permission, handler: Handler) {
-    return async (req: NextRequest) => {
+    return async (req: NextRequest, routeContext: any) => {
         const session = (await auth()) as unknown as SessionWithUser
 
         if (!session?.user) {
@@ -26,6 +26,6 @@ export function withRole(permission: Permission, handler: Handler) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
-        return handler(req, { session })
+        return handler(req, { ...routeContext, session })
     }
 }
