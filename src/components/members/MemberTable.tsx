@@ -1,17 +1,19 @@
+'use client'
 import Link from 'next/link'
 import { formatDate, daysUntil } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
+import { useRole } from '@/hooks/useRole'
 
 interface Member {
-  id:         string
-  name:       string
-  phone:      string
-  status:     'ACTIVE' | 'EXPIRED' | 'FROZEN' | 'CANCELLED'
+  id: string
+  name: string
+  phone: string
+  status: 'ACTIVE' | 'EXPIRED' | 'FROZEN' | 'CANCELLED'
   expiryDate: Date
-  joinDate:   Date
-  plan:       { name: string; price: number }
-  trainer:    { name: string } | null
-  _count:     { checkins: number }
+  joinDate: Date
+  plan: { name: string; price: number }
+  trainer: { name: string } | null
+  _count: { checkins: number }
 }
 
 interface MemberTableProps {
@@ -19,6 +21,9 @@ interface MemberTableProps {
 }
 
 export function MemberTable({ members }: MemberTableProps) {
+  const { role } = useRole()
+  const isTrainer = role === 'TRAINER'
+
   if (members.length === 0) {
     return (
       <div className="bg-card border border-border rounded-xl p-12 text-center">
@@ -37,7 +42,7 @@ export function MemberTable({ members }: MemberTableProps) {
       {/* ── Card grid: visible below lg ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 lg:hidden">
         {members.map(m => {
-          const days   = daysUntil(m.expiryDate)
+          const days = daysUntil(m.expiryDate)
           const urgent = m.status === 'ACTIVE' && days >= 0 && days <= 7
 
           return (
@@ -111,14 +116,16 @@ export function MemberTable({ members }: MemberTableProps) {
               </div>
 
               {/* Card footer — View link */}
-              <div className="border-t border-border px-4 py-2.5 bg-muted/40">
-                <Link
-                  href={`/dashboard/members/${m.id}`}
-                  className="text-[13px] font-semibold text-primary no-underline hover:underline"
-                >
-                  View →
-                </Link>
-              </div>
+              {!isTrainer && (
+                <div className="border-t border-border px-4 py-2.5 bg-muted/40">
+                  <Link
+                    href={`/dashboard/members/${m.id}`}
+                    className="text-[13px] font-semibold text-primary no-underline hover:underline"
+                  >
+                    View →
+                  </Link>
+                </div>
+              )}
             </div>
           )
         })}
@@ -129,9 +136,9 @@ export function MemberTable({ members }: MemberTableProps) {
         <table className="w-full border-collapse text-[13px]">
           <thead>
             <tr className="border-b border-border">
-              {['Member', 'Plan', 'Status', 'Expiry', 'Check-ins', 'Trainer', ''].map(h => (
+              {['Member', 'Plan', 'Status', 'Expiry', 'Check-ins', 'Trainer', !isTrainer && ''].filter(Boolean).map(h => (
                 <th
-                  key={h}
+                  key={h as string}
                   className="p-3.5 text-left font-medium text-xs text-muted-foreground whitespace-nowrap bg-muted"
                 >
                   {h}
@@ -141,9 +148,9 @@ export function MemberTable({ members }: MemberTableProps) {
           </thead>
           <tbody>
             {members.map(m => {
-              const days   = daysUntil(m.expiryDate)
+              const days = daysUntil(m.expiryDate)
               const urgent = m.status === 'ACTIVE' && days >= 0 && days <= 7
-              const td     = 'p-4 border-b border-border align-middle'
+              const td = 'p-4 border-b border-border align-middle'
 
               return (
                 <tr key={m.id}>
@@ -190,14 +197,16 @@ export function MemberTable({ members }: MemberTableProps) {
                   </td>
 
                   {/* View link */}
-                  <td className={td}>
-                    <Link
-                      href={`/dashboard/members/${m.id}`}
-                      className="text-[13px] font-semibold text-primary no-underline whitespace-nowrap hover:underline"
-                    >
-                      View →
-                    </Link>
-                  </td>
+                  {!isTrainer && (
+                    <td className={td}>
+                      <Link
+                        href={`/dashboard/members/${m.id}`}
+                        className="text-[13px] font-semibold text-primary no-underline whitespace-nowrap hover:underline"
+                      >
+                        View →
+                      </Link>
+                    </td>
+                  )}
 
                 </tr>
               )

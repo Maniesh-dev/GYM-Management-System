@@ -9,7 +9,10 @@ import { Clock } from '@/components/dashboard/Clock'
 
 export default async function DashboardPage() {
   const session = await auth()
-  const gymId = session!.user.gymId
+  const user = session!.user
+  const gymId = user.gymId
+  const isTrainer = user.role === 'TRAINER'
+  const trainerId = user.id
 
   // Use IST-corrected current date for display/greeting
   const now = getISTDate()
@@ -27,10 +30,27 @@ export default async function DashboardPage() {
     expiringSoon,
     todayCheckins,
   ] = await Promise.all([
-    prisma.member.count({ where: { gymId } }),
-    prisma.member.count({ where: { gymId, status: 'ACTIVE' } }),
-    prisma.member.count({ where: { gymId, status: 'EXPIRED' } }),
-    prisma.payment.aggregate({
+    prisma.member.count({ 
+      where: { 
+        gymId,
+        ...(isTrainer ? { trainerId } : {})
+      } 
+    }),
+    prisma.member.count({ 
+      where: { 
+        gymId, 
+        status: 'ACTIVE',
+        ...(isTrainer ? { trainerId } : {})
+      } 
+    }),
+    prisma.member.count({ 
+      where: { 
+        gymId, 
+        status: 'EXPIRED',
+        ...(isTrainer ? { trainerId } : {})
+      } 
+    }),
+    isTrainer ? Promise.resolve({ _sum: { amount: 0 } }) : prisma.payment.aggregate({
       where: { member: { gymId }, paidAt: { gte: monthStart } },
       _sum: { amount: true },
     }),
@@ -39,6 +59,7 @@ export default async function DashboardPage() {
         gymId,
         status: 'ACTIVE',
         expiryDate: { gte: now, lte: weekFromNow },
+        ...(isTrainer ? { trainerId } : {})
       },
       include: { plan: { select: { name: true } } },
       orderBy: { expiryDate: 'asc' },
@@ -90,12 +111,14 @@ export default async function DashboardPage() {
           sub={`${totalMembers} total`}
           color="#1D9E75"
         />
-        <KPICard
-          label="Revenue this month"
-          value={formatCurrency(monthRevenue._sum.amount ?? 0)}
-          sub={now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-          color="#534AB7"
-        />
+        {!isTrainer && (
+          <KPICard
+            label="Revenue this month"
+            value={formatCurrency(monthRevenue._sum.amount ?? 0)}
+            sub={now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            color="#534AB7"
+          />
+        )}
         <KPICard
           label="Today's check-ins"
           value={todayCheckins.length}
@@ -130,33 +153,37 @@ export default async function DashboardPage() {
         </div>
 
         {/* Quick actions */}
-        <div className={cardClass}>
-          <h2 className="text-[15px] font-bold text-foreground m-0 mb-4">
-            Quick actions
-          </h2>
-          <QuickActions />
-        </div>
+        {!isTrainer && (
+          <div className={cardClass}>
+            <h2 className="text-[15px] font-bold text-foreground m-0 mb-4">
+              Quick actions
+            </h2>
+            <QuickActions />
+          </div>
+        )}
 
       </div>
 
       {/* Today's check-ins full list */}
-      <div className={cardClass}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-[15px] font-bold text-foreground m-0 flex items-center">
-            Today&apos;s check-ins
-            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400">
-              {todayCheckins.length}
-            </span>
-          </h2>
-          <a
-            href="/dashboard/checkins"
-            className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
-          >
-            View all &rarr;
-          </a>
+      {todayCheckins.length > 0 && (
+        <div className={cardClass}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[15px] font-bold text-foreground m-0 flex items-center">
+              Today&apos;s check-ins
+              <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400">
+                {todayCheckins.length}
+              </span>
+            </h2>
+            <a
+              href="/dashboard/checkins"
+              className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
+            >
+              View all &rarr;
+            </a>
+          </div>
+          <RecentCheckins checkins={todayCheckins} />
         </div>
-        <RecentCheckins checkins={todayCheckins} />
-      </div>
+      )}
 
     </div>
   )

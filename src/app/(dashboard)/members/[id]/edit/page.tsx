@@ -2,6 +2,7 @@ import { auth }     from '@/lib/auth'
 import { prisma }   from '@/lib/db'
 import { notFound } from 'next/navigation'
 import { EditMemberForm } from '@/components/members/EditMemberForm'
+import { Unauthorized }   from '@/components/Unauthorized'
 import Link               from 'next/link'
 
 export default async function EditMemberPage({
@@ -10,6 +11,11 @@ export default async function EditMemberPage({
   params: Promise<{ id: string }>
 }) {
   const session = await auth()
+  
+  if (session!.user.role === 'TRAINER') {
+    return <Unauthorized />
+  }
+
   const gymId   = session!.user.gymId
   const { id }  = await params
 
@@ -31,39 +37,27 @@ export default async function EditMemberPage({
   if (!member) notFound()
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 680 }}>
-      <div style={{
-        display:    'flex',
-        alignItems: 'center',
-        gap:        8,
-        marginBottom: 24,
-        fontSize:   13,
-        color:      '#888',
-      }}>
-        <Link href="/dashboard/members" style={{ color: '#888', textDecoration: 'none' }}>
+    <div className="p-7 md:p-8 max-w-[680px]">
+      <div className="flex items-center gap-2 mb-6 text-[13px] text-muted-foreground">
+        <Link href="/dashboard/members" className="text-muted-foreground no-underline hover:text-foreground transition-colors">
           Members
         </Link>
         <span>/</span>
         <Link
           href={`/dashboard/members/${member.id}`}
-          style={{ color: '#888', textDecoration: 'none' }}
+          className="text-muted-foreground no-underline hover:text-foreground transition-colors"
         >
           {member.name}
         </Link>
         <span>/</span>
-        <span style={{ color: '#1a1a1a' }}>Edit</span>
+        <span className="text-foreground">Edit</span>
       </div>
 
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>
+      <h1 className="text-[22px] font-bold m-0 mb-6 text-foreground">
         Edit member
       </h1>
 
-      <div style={{
-        background:   '#fff',
-        border:       '0.5px solid #e8e5dd',
-        borderRadius: 14,
-        padding:      '28px 32px',
-      }}>
+      <div className="bg-card border border-border rounded-xl p-7">
         <EditMemberForm
           member={member}
           plans={plans}
@@ -73,3 +67,4 @@ export default async function EditMemberPage({
     </div>
   )
 }
+走走

@@ -38,7 +38,10 @@ export default async function MembersPage({
     }),
     prisma.member.groupBy({
       by: ['status'],
-      where: { gymId },
+      where: { 
+        gymId,
+        ...(session!.user.role === 'TRAINER' ? { trainerId: session!.user.id } : {})
+      },
       _count: true,
     }),
   ])

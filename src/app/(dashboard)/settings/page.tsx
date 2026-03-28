@@ -1,46 +1,57 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { GymProfileForm } from '@/components/settings/GymProfileForm'
-import { PlanManager } from '@/components/settings/PlanManager'
+import { notFound } from 'next/navigation'
+import { Unauthorized } from '@/components/Unauthorized'
 
 export default async function SettingsPage() {
-    const session = await auth()
-    const gymId = session!.user.gymId
+  const session = await auth()
+  
+  if (session!.user.role === 'TRAINER') {
+    return <Unauthorized />
+  }
 
-    const [gym, plans] = await Promise.all([
-        prisma.gym.findUnique({ where: { id: gymId } }),
-        prisma.plan.findMany({ where: { gymId }, orderBy: { price: 'asc' } }),
-    ])
+  const gymId = session!.user.gymId
+  const gym = await prisma.gym.findUnique({
+    where: { id: gymId },
+  })
 
-    if (!gym) return null
+  if (!gym) notFound()
 
-    return (
-        <div style={{ padding: '28px 32px', maxWidth: 720 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 500, marginBottom: 28 }}>Settings</h1>
+  return (
+    <div className="p-7 max-w-[600px]">
+      <div className="mb-7">
+        <h1 className="text-[22px] font-bold m-0 mb-1 text-foreground">
+          Gym Settings
+        </h1>
+        <p className="text-sm text-muted-foreground m-0">
+          Manage your gym profile and business details.
+        </p>
+      </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-                {/* Gym Profile */}
-                <section style={{
-                    background: 'var(--color-background-primary)',
-                    border: '0.5px solid var(--color-border-tertiary)',
-                    borderRadius: 12, padding: '24px',
-                }}>
-                    <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 20 }}>Gym profile</h2>
-                    <GymProfileForm gym={gym} />
-                </section>
-
-                {/* Plan management */}
-                <section style={{
-                    background: 'var(--color-background-primary)',
-                    border: '0.5px solid var(--color-border-tertiary)',
-                    borderRadius: 12, padding: '24px',
-                }}>
-                    <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 20 }}>Membership plans</h2>
-                    <PlanManager plans={plans} gymId={gymId} />
-                </section>
-
-            </div>
+      <div className="bg-card border border-border rounded-xl p-7 flex flex-col gap-6">
+        <div>
+          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block mb-2 opacity-60">Gym Name</label>
+          <div className="px-4 py-2.5 rounded-lg border border-border bg-muted/30 text-sm font-medium text-foreground">
+            {gym.name}
+          </div>
         </div>
-    )
+
+        <div>
+          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5 opacity-60">Subscription</label>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 tracking-wider">
+              {gym.plan}
+            </span>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-border mt-2">
+          <p className="text-[13px] text-muted-foreground leading-relaxed m-0">
+            For major changes or billing inquiries, please contact support.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
+走走

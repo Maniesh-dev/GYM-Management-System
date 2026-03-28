@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { ApproveButton } from '@/components/staff/ApproveButton'
 import { getISTDateString, getISTDayBoundaries } from '@/lib/utils'
+import { Unauthorized } from '@/components/Unauthorized'
 
 export default async function AttendancePage({
     searchParams: searchParamsPromise,
@@ -9,6 +10,11 @@ export default async function AttendancePage({
     searchParams: Promise<{ date?: string; userId?: string }>
 }) {
     const session = await auth()
+    
+    if (session!.user.role === 'TRAINER') {
+        return <Unauthorized />
+    }
+
     const gymId = session!.user.gymId
     const searchParams = await searchParamsPromise
     type AttendanceLog = {
@@ -61,7 +67,7 @@ export default async function AttendancePage({
 
     logs.forEach((l) => {
         if (byUser[l.userId]) {
-            byUser[l.userId].logs.push(l)
+            byUser[l.userId].logs.push(l as any)
         }
     })
 
@@ -90,66 +96,45 @@ export default async function AttendancePage({
     const fmt = (d: Date) =>
         new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
 
-    const card: React.CSSProperties = {
-        background: 'var(--color-background-primary)',
-        border: '0.5px solid var(--color-border-tertiary)',
-        borderRadius: 12, padding: '20px 24px',
-    }
-
     const isOwner = session!.user.role === 'OWNER'
 
     return (
-        <div style={{ padding: '28px 32px', maxWidth: 800 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 500, marginBottom: 20 }}>Staff attendance</h1>
+        <div className="p-4 md:p-8 max-w-4xl mx-auto">
+            <h1 className="text-2xl font-bold text-foreground mb-6">Staff Attendance</h1>
 
             {/* Filters */}
-            <form style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+            <form className="flex flex-wrap gap-3 mb-8 bg-card border border-border p-4 rounded-xl shadow-sm">
                 <input
                     name="date"
                     type="date"
                     defaultValue={dateStr}
-                    style={{
-                        padding: '8px 12px', borderRadius: 8, fontSize: 13,
-                        border: '0.5px solid var(--color-border-secondary)',
-                        background: 'var(--color-background-primary)',
-                        color: 'var(--color-text-primary)',
-                    }}
+                    className="px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
                 <select
                     name="userId"
                     defaultValue={searchParams.userId ?? ''}
-                    className='border border-zinc-100/10 px-2'
-                    style={{
-                        padding: '8px 12px', borderRadius: 8, fontSize: 13,
-                        background: 'var(--color-background-primary)',
-                        color: 'var(--color-text-primary)',
-                    }}
+                    className="px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-ring min-w-[180px]"
                 >
-                    <option value="" className='text-black px-2'>All staff</option>
+                    <option value="">All staff members</option>
                     {staff.map((s) => (
-                        <option key={s.id} value={s.id} className='text-black px-2'>
-                            {s.name}
+                        <option key={s.id} value={s.id}>
+                            {s.name} ({s.role.toLowerCase()})
                         </option>
                     ))}
                 </select>
-                <button type="submit" className='border border-zinc-100/10'
-                    style={{
-                        padding: '8px 16px', borderRadius: 8, fontSize: 13,
-                        background: 'var(--color-background-secondary)',
-                        cursor: 'pointer', color: 'var(--color-text-primary)',
-                    }}>
+                <button type="submit" className="px-5 py-2 bg-foreground text-background rounded-lg text-sm font-bold hover:opacity-90 transition-all">
                     Filter
                 </button>
             </form>
 
             {Object.keys(byUser).length === 0 ? (
-                <div style={{ ...card, textAlign: 'center', padding: 40 }}>
-                    <p style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
-                        No attendance records for {dateStr}
+                <div className="bg-card border border-border rounded-xl p-16 text-center">
+                    <p className="text-sm text-muted-foreground italic">
+                        No attendance records found for this date.
                     </p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="space-y-4">
                     {Object.entries(byUser).map(([userId, data]) => (
                         <div key={userId} className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm">
                             <div className="flex justify-between items-start mb-6">
@@ -159,10 +144,7 @@ export default async function AttendancePage({
                                         inline-block mt-1 text-[10px] uppercase font-black px-2 py-0.5 rounded-md border
                                         ${data.role === 'TRAINER'
                                             ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400'
-                                            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400'}
-                                        ${data.role === 'RECEPTION'
-                                            ? 'bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800 text-green-700 dark:text-green-400'
-                                            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400'}
+                                            : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'}
                                     `}>
                                         {data.role}
                                     </span>
@@ -188,18 +170,18 @@ export default async function AttendancePage({
                                         <div key={i} className={`
                                             flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border
                                             ${l.type === 'IN'
-                                                ? 'bg-[#1D9E7510] border-[#1D9E7530] text-[#1D9E75]'
-                                                : 'bg-[#185FA510] border-[#185FA530] text-[#185FA5]'}
-                                            ${l.status === 'PENDING' ? 'opacity-70 border-dashed border-[#BA751750]' : ''}
+                                                ? 'bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400'
+                                                : 'bg-blue-50/50 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-800/50 text-blue-700 dark:text-blue-400'}
+                                            ${l.status === 'PENDING' ? 'opacity-70 border-dashed border-amber-300 dark:border-amber-700' : ''}
                                         `}>
-                                            <span className={`w-2 h-2 rounded-full ${l.type === 'IN' ? 'bg-[#1D9E75]' : 'bg-[#185FA5]'}`} />
+                                            <span className={`w-2 h-2 rounded-full ${l.type === 'IN' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                                             <span>{l.type}</span>
                                             <span className="opacity-60 tabular-nums">{fmt(l.checkedAt)}</span>
                                             {l.method === 'MANUAL' && <span className="opacity-40 text-[10px]" title="Manual Entry">✎</span>}
 
                                             {l.status === 'PENDING' && (
-                                                <div className="flex items-center gap-2 pl-2 border-l border-[#BA751730] ml-1">
-                                                    <span className="text-[10px] text-[#BA7517] font-black uppercase tracking-tighter">Pending</span>
+                                                <div className="flex items-center gap-2 pl-2 border-l border-amber-200 dark:border-amber-800 ml-1">
+                                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-tighter">Pending</span>
                                                     {isOwner && <ApproveButton id={l.id} />}
                                                 </div>
                                             )}
@@ -207,7 +189,7 @@ export default async function AttendancePage({
                                     ))
                                 ) : (
                                     <div className="text-[11px] text-muted-foreground italic px-1">
-                                        No activity logged today
+                                        No activity logged
                                     </div>
                                 )}
                             </div>
@@ -218,3 +200,4 @@ export default async function AttendancePage({
         </div>
     )
 }
+走走

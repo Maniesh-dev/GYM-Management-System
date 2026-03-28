@@ -1,10 +1,17 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { MemberForm } from '@/components/members/MemberForm'
+import { notFound } from 'next/navigation'
+import { Unauthorized } from '@/components/Unauthorized'
 import Link from 'next/link'
 
 export default async function NewMemberPage() {
   const session = await auth()
+  
+  if (session!.user.role === 'TRAINER') {
+    return <Unauthorized />
+  }
+
   const gymId = session!.user.gymId
 
   const [plans, trainers] = await Promise.all([
@@ -48,3 +55,4 @@ export default async function NewMemberPage() {
     </div>
   )
 }
+走走

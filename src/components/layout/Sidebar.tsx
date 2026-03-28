@@ -121,14 +121,16 @@ export function Sidebar() {
                         {!isCollapsed && <span className="text-sm text-muted-foreground whitespace-nowrap">Theme</span>}
                         <ModeToggle />
                     </div>
-                    <Link
-                        href="/kiosk"
-                        target="_blank"
-                        title="Open Scanner"
-                        className={`block rounded-lg text-sm text-muted-foreground no-underline hover:bg-muted hover:text-foreground transition-colors ${isCollapsed ? 'p-3 flex justify-center' : 'px-3.5 py-2'}`}
-                    >
-                        {isCollapsed ? '↗' : 'Open Scanner ↗'}
-                    </Link>
+                    {role !== 'TRAINER' && (
+                        <Link
+                            href="/kiosk"
+                            target="_blank"
+                            title="Open Scanner"
+                            className={`block rounded-lg text-sm text-muted-foreground no-underline hover:bg-muted hover:text-foreground transition-colors ${isCollapsed ? 'p-3 flex justify-center' : 'px-3.5 py-2'}`}
+                        >
+                            {isCollapsed ? '↗' : 'Open Scanner ↗'}
+                        </Link>
+                    )}
                     <button
                         onClick={() => signOut({ callbackUrl: '/login' })}
                         title="Sign out"

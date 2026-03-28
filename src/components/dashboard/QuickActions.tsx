@@ -1,9 +1,13 @@
+'use client'
 import Link from 'next/link'
+import { useRole } from '@/hooks/useRole'
+import { Permission } from '@/types/roles'
 
 interface Action {
   label: string
   href: string
   desc: string
+  permission: Permission | null
   color?: string
 }
 
@@ -12,32 +16,42 @@ const ACTIONS: Action[] = [
     label: 'Add new member',
     href: '/dashboard/members/new',
     desc: 'Register a new member',
+    permission: 'members:write',
     color: '#534AB7',
   },
   {
     label: 'Record payment',
     href: '/dashboard/billing',
     desc: 'Cash, UPI, card or cheque',
+    permission: 'billing:write',
     color: '#1D9E75',
   },
   {
     label: 'View check-ins',
     href: '/dashboard/checkins',
     desc: "Today's entry log",
+    permission: 'checkins:read',
     color: '#185FA5',
   },
   {
     label: 'Open Scanner',
     href: '/kiosk',
     desc: 'QR scanner for entry',
+    permission: null,
     color: '#BA7517',
   },
 ]
 
 export function QuickActions() {
+  const { can } = useRole()
+
+  const visible = ACTIONS.filter(
+    item => item.permission === null || can(item.permission)
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {ACTIONS.map(action => (
+      {visible.map(action => (
         <Link
           key={action.href}
           href={action.href}
