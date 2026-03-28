@@ -4,11 +4,13 @@ import { formatCurrency, getISTDate } from '@/lib/utils'
 import { RevenueChartWithFilter } from '@/components/reports/RevenueChartWithFilter'
 import { PlanPieChart } from '@/components/reports/PlanPieChart'
 import { MemberLifecycleTrendChart } from '@/components/reports/MemberLifecycleTrendChart'
+import { OwnerStaffAttendanceChart } from '@/components/reports/OwnerStaffAttendanceChart'
 import Link from 'next/link'
 
 export default async function ReportsPage() {
     const session = await auth()
     const gymId = session!.user.gymId
+    const isOwner = session!.user.role === 'OWNER'
     const canViewMonthlyMemberReport = session!.user.role === 'OWNER' || session!.user.role === 'RECEPTION'
 
     // Use IST-corrected dates for accurate "this month" calculations
@@ -32,7 +34,7 @@ export default async function ReportsPage() {
         monthRevenue, totalRevenue,
         newThisMonth, cancelledThisMonth,
         paymentsByMode, planDistribution,
-        monthlyPayments, trainerStats, missingMembers, expiredMembersList, monthlyMemberReport,
+        monthlyPayments, trainerStats, staffUsers, staffAttendanceLogs, missingMembers, expiredMembersList, monthlyMemberReport,
     ] = await Promise.all([
         prisma.member.count({ where: { gymId } }),
         prisma.member.count({ where: { gymId, status: 'ACTIVE' } }),
@@ -79,6 +81,29 @@ export default async function ReportsPage() {
             where: { gymId, role: 'TRAINER' },
             include: { assignedMembers: { select: { id: true } } },
         }),
+        isOwner
+            ? prisma.user.findMany({
+                where: {
+                    gymId,
+                    isActive: true,
+                    role: { in: ['TRAINER', 'RECEPTION'] },
+                },
+                select: { id: true, name: true, role: true },
+                orderBy: { name: 'asc' },
+            })
+            : Promise.resolve([]),
+        isOwner
+            ? prisma.trainerCheckin.findMany({
+                where: {
+                    gymId,
+                    status: 'APPROVED',
+                    checkedAt: { gte: maxHistoryDate },
+                    user: { role: { in: ['TRAINER', 'RECEPTION'] } },
+                },
+                select: { userId: true, checkedAt: true, type: true },
+                orderBy: { checkedAt: 'asc' },
+            })
+            : Promise.resolve([]),
         prisma.member.findMany({
             where: {
                 gymId,
@@ -222,6 +247,19 @@ export default async function ReportsPage() {
                     <div className="h-[320px]">
                         <MemberLifecycleTrendChart data={monthlyMemberReport} />
                     </div>
+                </div>
+            )}
+
+            {isOwner && (
+                <div className={cardClass}>
+                    <OwnerStaffAttendanceChart
+                        staff={staffUsers}
+                        logs={staffAttendanceLogs.map((l) => ({
+                            userId: l.userId,
+                            checkedAt: l.checkedAt.toISOString(),
+                            type: l.type,
+                        }))}
+                    />
                 </div>
             )}
 

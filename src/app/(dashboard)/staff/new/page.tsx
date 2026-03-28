@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
+import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,6 +27,7 @@ type FormValues = z.infer<typeof schema>
 export default function NewStaffPage() {
     const router = useRouter()
     const [saving, setSaving] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
 
     const form = useForm<FormValues>({
@@ -106,7 +108,22 @@ export default function NewStaffPage() {
                 <div style={grid2}>
                     <div style={field}>
                         <Label>Password *</Label>
-                        <Input {...form.register('password')} type="password" placeholder="Min 6 characters" />
+                        <div style={{ position: 'relative' }}>
+                            <Input
+                                {...form.register('password')}
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Min 6 characters"
+                                className="pr-10"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                         {form.formState.errors.password && (
                             <p style={err}>{form.formState.errors.password.message}</p>
                         )}

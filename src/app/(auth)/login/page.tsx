@@ -2,10 +2,12 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('owner@fightclub.com')
     const [password, setPassword] = useState('maniesh@123')
+    const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [debugLog, setDebugLog] = useState<string[]>([])
 
@@ -31,7 +33,7 @@ export default function LoginPage() {
 
                 const errorMessages: Record<string, string> = {
                     CredentialsSignin: 'Wrong email or password',
-                    Configuration: 'Server config error — check AUTH_SECRET in .env.local',
+                    Configuration: 'Server config error - check AUTH_SECRET in .env.local',
                     AccessDenied: 'Access denied',
                     Verification: 'Verification error',
                     Default: 'Login failed',
@@ -144,24 +146,48 @@ export default function LoginPage() {
                                 <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
                                     Password
                                 </label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    placeholder="••••••••"
-                                    required
-                                    autoComplete="current-password"
-                                    disabled={loading}
-                                    style={{
-                                        padding: '11px 14px',
-                                        borderRadius: 10,
-                                        border: '1px solid #d1d5db',
-                                        fontSize: 15,
-                                        color: '#111827',
-                                        background: '#fff',
-                                        width: '100%',
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        placeholder="Enter password"
+                                        required
+                                        autoComplete="current-password"
+                                        disabled={loading}
+                                        style={{
+                                            padding: '11px 42px 11px 14px',
+                                            borderRadius: 10,
+                                            border: '1px solid #d1d5db',
+                                            fontSize: 15,
+                                            color: '#111827',
+                                            background: '#fff',
+                                            width: '100%',
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        disabled={loading}
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                        style={{
+                                            position: 'absolute',
+                                            right: 10,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            color: '#6b7280',
+                                            cursor: loading ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: 0,
+                                        }}
+                                    >
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <button

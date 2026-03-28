@@ -1,10 +1,11 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { getISTStartOfDay, getISTDate } from '@/lib/utils'
+import { getISTStartOfDay, getISTDate, getISTDateString } from '@/lib/utils'
 import { KPICard } from '@/components/dashboard/KPICard'
 import { ExpiringList } from '@/components/dashboard/ExpiringList'
 import { RecentCheckins } from '@/components/dashboard/RecentCheckins'
 import { QuickActions } from '@/components/dashboard/QuickActions'
+import { TrainerReportChart } from '@/components/dashboard/TrainerReportChart'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
@@ -16,6 +17,7 @@ export default async function DashboardPage() {
   const now = getISTDate()
   // Use UTC Date that corresponds to 00:00:00 IST for Prisma queries
   const todayStart = getISTStartOfDay()
+  const oneDayMs = 24 * 60 * 60 * 1000
 
   const missingCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
   const weekFromNowEnd = new Date(todayStart.getTime() + 8 * 24 * 60 * 60 * 1000 - 1)
@@ -29,6 +31,7 @@ export default async function DashboardPage() {
     missingMembers,
     expiringSoon,
     todayCheckins,
+    trainerReportCheckins,
   ] = await Promise.all([
     prisma.member.count({ where: { gymId } }),
     prisma.member.count({ where: { gymId, status: 'ACTIVE' } }),
@@ -36,40 +39,39 @@ export default async function DashboardPage() {
       ? prisma.member.count({ where: { gymId, trainerId: session!.user.id } })
       : Promise.resolve(0),
     prisma.member.count({ where: { gymId, status: 'EXPIRED' } }),
-    isTrainer
-      ? Promise.resolve(0)
-      : prisma.member.count({
-        where: {
-          gymId,
-          status: 'ACTIVE',
-          checkins: {
-            none: { checkedAt: { gte: missingCutoff } },
-          },
+    prisma.member.count({
+      where: {
+        gymId,
+        status: 'ACTIVE',
+        ...(isTrainer ? { trainerId: session!.user.id } : {}),
+        checkins: {
+          none: { checkedAt: { gte: missingCutoff } },
         },
-      }),
-    isTrainer
-      ? Promise.resolve([])
-      : prisma.member.findMany({
-        where: {
-          gymId,
-          status: 'ACTIVE',
-          checkins: {
-            none: { checkedAt: { gte: missingCutoff } },
-          },
-        },
-        include: {
-          checkins: {
-            orderBy: { checkedAt: 'desc' },
-            take: 1,
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 8,
-      }),
+      },
+    }),
     prisma.member.findMany({
       where: {
         gymId,
         status: 'ACTIVE',
+        ...(isTrainer ? { trainerId: session!.user.id } : {}),
+        checkins: {
+          none: { checkedAt: { gte: missingCutoff } },
+        },
+      },
+      include: {
+        checkins: {
+          orderBy: { checkedAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+    }),
+    prisma.member.findMany({
+      where: {
+        gymId,
+        status: 'ACTIVE',
+        ...(isTrainer ? { trainerId: session!.user.id } : {}),
         expiryDate: { gte: todayStart, lte: weekFromNowEnd },
       },
       include: { plan: { select: { name: true } } },
@@ -85,12 +87,67 @@ export default async function DashboardPage() {
       orderBy: { checkedAt: 'desc' },
       take: 8,
     }),
+    isTrainer
+      ? prisma.trainerCheckin.findMany({
+        where: {
+          gymId,
+          userId: session!.user.id,
+          status: 'APPROVED',
+        },
+        select: { checkedAt: true, type: true },
+        orderBy: { checkedAt: 'asc' },
+      })
+      : Promise.resolve([]),
   ])
 
   const hour = now.getHours()
   const greeting =
     hour < 12 ? 'Good morning' :
       hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  const dailyWorkedMs = new Map<string, number>()
+  let lastIn: Date | null = null
+
+  for (const log of trainerReportCheckins) {
+    if (log.type === 'IN') {
+      lastIn = log.checkedAt
+      continue
+    }
+    if (log.type === 'OUT' && lastIn) {
+      const workedMs = log.checkedAt.getTime() - lastIn.getTime()
+      if (workedMs > 0) {
+        const dayKey = getISTDateString(lastIn)
+        dailyWorkedMs.set(dayKey, (dailyWorkedMs.get(dayKey) ?? 0) + workedMs)
+      }
+      lastIn = null
+    }
+  }
+
+  const getHours = (key: string) => Number(((dailyWorkedMs.get(key) ?? 0) / (1000 * 60 * 60)).toFixed(2))
+  const formatDay = (key: string, withYear = false) =>
+    new Date(`${key}T00:00:00+05:30`).toLocaleDateString(
+      'en-IN',
+      withYear
+        ? { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'Asia/Kolkata' }
+        : { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' }
+    )
+
+  const trainerWeeklyReport = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(todayStart.getTime() - (6 - i) * oneDayMs)
+    const key = getISTDateString(d)
+    return { label: formatDay(key), hours: getHours(key) }
+  })
+
+  const buildRollingReport = (days: number, withYear = false) =>
+    Array.from({ length: days }, (_, i) => {
+      const d = new Date(todayStart.getTime() - (days - 1 - i) * oneDayMs)
+      const key = getISTDateString(d)
+      return { label: formatDay(key, withYear), hours: getHours(key) }
+    })
+
+  const trainerLastMonthReport = buildRollingReport(30)
+  const trainerLast3MonthsReport = buildRollingReport(90, true)
+  const trainerLast6MonthsReport = buildRollingReport(180, true)
 
   const cardClass = "bg-card border border-border rounded-xl p-5"
 
@@ -100,7 +157,7 @@ export default async function DashboardPage() {
       {/* Greeting */}
       <div className="mb-7">
         <h1 className="text-2xl font-bold text-foreground m-0 mb-1">
-          {greeting}, {session!.user.name?.split(' ')[0]} 👋
+          {greeting}, {session!.user.name?.split(' ')[0]} {'\u{1F44B}'}
         </h1>
         <div className="flex items-center text-sm text-muted-foreground m-0">
           <span>
@@ -122,26 +179,33 @@ export default async function DashboardPage() {
           sub={`${totalMembers} total`}
           color="#1D9E75"
         />
-        {!isTrainer && (
-          <KPICard
-            label="Missing members"
-            value={missingMembersCount}
-            sub="> 3 days no check-in"
-            color="#534AB7"
-          />
-        )}
+        <KPICard
+          label="Missing members"
+          value={missingMembersCount}
+          sub={isTrainer ? 'your assigned > 3 days' : '> 3 days no check-in'}
+          color="#534AB7"
+        />
         <KPICard
           label="Today's check-ins"
           value={todayCheckins.length}
           sub="members entered today"
           color="#185FA5"
         />
-        <KPICard
-          label="Expired memberships"
-          value={expiredMembers}
-          sub="need renewal"
-          color="#E24B4A"
-        />
+        {isTrainer ? (
+          <KPICard
+            label="About to expire"
+            value={expiringSoon.length}
+            sub="next 7 days"
+            color="#E24B4A"
+          />
+        ) : (
+          <KPICard
+            label="Expired memberships"
+            value={expiredMembers}
+            sub="need renewal"
+            color="#E24B4A"
+          />
+        )}
       </div>
 
       {/* Main grid */}
@@ -159,14 +223,16 @@ export default async function DashboardPage() {
                 {expiringSoon.length}
               </span>
             </h2>
-            <Link
-              href="/dashboard/members/expired"
-              className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
-            >
-              View all &rarr;
-            </Link>
+            {!isTrainer && (
+              <Link
+                href="/dashboard/members/expired"
+                className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
+              >
+                View all &rarr;
+              </Link>
+            )}
           </div>
-          <ExpiringList members={expiringSoon} />
+          <ExpiringList members={expiringSoon} disableMemberClick={isTrainer} />
         </div>
 
         {/* Quick actions */}
@@ -178,11 +244,23 @@ export default async function DashboardPage() {
             <QuickActions />
           </div>
         )}
+        {isTrainer && (
+          <div className={cardClass}>
+            <h2 className="text-[15px] font-bold text-foreground m-0 mb-4">
+              My reports
+            </h2>
+            <TrainerReportChart
+              weekly={trainerWeeklyReport}
+              lastMonth={trainerLastMonthReport}
+              last3Months={trainerLast3MonthsReport}
+              last6Months={trainerLast6MonthsReport}
+            />
+          </div>
+        )}
 
       </div>
 
-      {!isTrainer && (
-        <div className={`${cardClass} mb-5`}>
+      <div className={`${cardClass} mb-5`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[15px] font-bold text-foreground m-0 flex items-center">
               Missing members (&gt;3 days)
@@ -190,12 +268,14 @@ export default async function DashboardPage() {
                 {missingMembers.length}
               </span>
             </h2>
-            <Link
-              href="/dashboard/members/missing"
-              className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
-            >
-              View all &rarr;
-            </Link>
+            {!isTrainer && (
+              <Link
+                href="/dashboard/members/missing"
+                className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
+              >
+                View all &rarr;
+              </Link>
+            )}
           </div>
           {missingMembers.length === 0 ? (
             <p className="p-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-lg m-0">
@@ -204,25 +284,37 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {missingMembers.map((m) => (
-                <Link
-                  key={m.id}
-                  href={`/dashboard/members/${m.id}`}
-                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors no-underline"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate m-0">{m.name}</p>
-                    <p className="text-[11px] text-muted-foreground m-0 mt-1">
-                      Last check-in: {m.checkins[0] ? new Date(m.checkins[0].checkedAt).toLocaleDateString('en-IN') : 'Never'}
-                    </p>
+                isTrainer ? (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/20"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate m-0">{m.name}</p>
+                      <p className="text-[11px] text-muted-foreground m-0 mt-1">
+                        Last check-in: {m.checkins[0] ? new Date(m.checkins[0].checkedAt).toLocaleDateString('en-IN') : 'Never'}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold text-primary whitespace-nowrap">View →</span>
-                </Link>
+                ) : (
+                  <Link
+                    key={m.id}
+                    href={`/dashboard/members/${m.id}`}
+                    className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors no-underline"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate m-0">{m.name}</p>
+                      <p className="text-[11px] text-muted-foreground m-0 mt-1">
+                        Last check-in: {m.checkins[0] ? new Date(m.checkins[0].checkedAt).toLocaleDateString('en-IN') : 'Never'}
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold text-primary whitespace-nowrap">View &rarr;</span>
+                  </Link>
+                )
               ))}
             </div>
           )}
         </div>
-      )}
-
       {/* Today's check-ins full list */}
       <div className={cardClass}>
         <div className="flex justify-between items-center mb-4">
