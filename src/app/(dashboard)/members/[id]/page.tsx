@@ -67,7 +67,7 @@ export default async function MemberProfilePage({
                     {canBill && (
                         <div className="flex-1 sm:flex-none">
                             <PaymentFormDialog
-                                members={[{ id: member.id, name: member.name, phone: member.phone, planId: member.planId }]}
+                                members={[{ id: member.id, name: member.name, phone: member.phone, planId: member.planId, expiryDate: member.expiryDate }]}
                                 plans={await prisma.plan.findMany({ where: { gymId: session!.user.gymId, isActive: true } })}
                                 preselectedMemberId={member.id}
                             />

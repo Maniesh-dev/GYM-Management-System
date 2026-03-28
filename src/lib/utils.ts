@@ -25,12 +25,22 @@ export function daysUntil(date: Date | string) {
  * Works regardless of the server's local timezone.
  */
 export function getISTDateString(date: Date = new Date()) {
-    return new Intl.DateTimeFormat('en-CA', {
+    const parts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Asia/Kolkata',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-    }).format(date)
+    }).formatToParts(date)
+
+    const year = parts.find((p) => p.type === 'year')?.value
+    const month = parts.find((p) => p.type === 'month')?.value
+    const day = parts.find((p) => p.type === 'day')?.value
+
+    if (!year || !month || !day) {
+        throw new Error('Failed to build IST date string')
+    }
+
+    return `${year}-${month}-${day}`
 }
 
 /**
@@ -38,9 +48,10 @@ export function getISTDateString(date: Date = new Date()) {
  * Returns absolute UTC Date objects.
  */
 export function getISTDayBoundaries(dateStr: string) {
+    const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : getISTDateString()
     // Construct ISO strings with IST offset (+05:30)
-    const dayStart = new Date(`${dateStr}T00:00:00+05:30`)
-    const dayEnd = new Date(`${dateStr}T23:59:59+05:30`)
+    const dayStart = new Date(`${safeDate}T00:00:00+05:30`)
+    const dayEnd = new Date(`${safeDate}T23:59:59+05:30`)
     return { dayStart, dayEnd }
 }
 

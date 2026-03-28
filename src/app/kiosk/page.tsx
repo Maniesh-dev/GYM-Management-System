@@ -349,7 +349,7 @@ function QRScanTab() {
                     {result.scanType === 'MEMBER' && result.status === 'SUCCESS' && (
                         <div style={{ fontSize: 13, color: cfg.text, opacity: .75, lineHeight: 1.9 }}>
                             {result.plan && <div>Plan: <strong>{result.plan}</strong></div>}
-                            {result.trainer && <div>Trainer: {result.trainer}</div>}
+                            {result.trainer && <div>Trainer: {result.trainer ? result.trainer : 'No trainer assigned'}</div>}
                         </div>
                     )}
                     {result.scanType === 'TRAINER' && result.status === 'SUCCESS' && (

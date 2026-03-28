@@ -207,7 +207,7 @@ export default async function AttendancePage({
                                     ))
                                 ) : (
                                     <div className="text-[11px] text-muted-foreground italic px-1">
-                                        No activity logged today
+                                        No activity logged
                                     </div>
                                 )}
                             </div>

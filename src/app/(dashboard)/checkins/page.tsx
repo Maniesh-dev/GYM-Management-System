@@ -22,7 +22,7 @@ export default async function CheckinsPage({
             ? { member: { gymId }, checkedAt: { gte: dayStart, lte: dayEnd } }
             : { member: { gymId }, checkedAt: { gte: todayStart } },
         include: {
-            member: { select: { name: true, phone: true, plan: { select: { name: true } } } },
+            member: { select: { name: true, phone: true, trainerId: true, plan: { select: { name: true } } } },
         },
         orderBy: { checkedAt: 'desc' },
     })
@@ -92,7 +92,11 @@ export default async function CheckinsPage({
                                 isTrainer ? (
                                     <div
                                         key={c.id}
-                                        className="flex justify-between items-center p-3.5 border-b border-border last:border-0"
+                                        className={`flex justify-between items-center p-3.5 border-b border-border last:border-0 ${
+                                            c.member.trainerId === session!.user.id
+                                                ? 'bg-emerald-50/40 dark:bg-emerald-900/10 border-l-2 border-l-emerald-500'
+                                                : ''
+                                        }`}
                                     >
                                         <div className="min-w-0">
                                             <p className="font-semibold text-foreground text-sm truncate">{c.member.name}</p>

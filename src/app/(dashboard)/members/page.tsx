@@ -14,11 +14,13 @@ export default async function MembersPage({
   const search = searchParams.search ?? ''
   const status = searchParams.status ?? ''
 
-  const [members, counts] = await Promise.all([
+  const isTrainer = session!.user.role === 'TRAINER'
+
+  const [members, counts, trainers, assignedMembersTotal] = await Promise.all([
     prisma.member.findMany({
       where: {
         gymId,
-        ...(session!.user.role === 'TRAINER'
+        ...(isTrainer
           ? { trainerId: session!.user.id }
           : {}),
         ...(search ? {
@@ -41,6 +43,14 @@ export default async function MembersPage({
       where: { gymId },
       _count: true,
     }),
+    prisma.user.findMany({
+      where: { gymId, role: 'TRAINER', isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    isTrainer
+      ? prisma.member.count({ where: { gymId, trainerId: session!.user.id } })
+      : Promise.resolve(0),
   ])
 
   const statusCount = Object.fromEntries(
@@ -68,6 +78,7 @@ export default async function MembersPage({
           </h1>
           <p className="text-[13px] text-muted-foreground m-0">
             {members.length} result{members.length !== 1 ? 's' : ''}
+            {isTrainer ? ` · ${assignedMembersTotal} assigned to you` : ''}
           </p>
         </div>
         {canAdd && (
@@ -128,7 +139,7 @@ export default async function MembersPage({
       </form>
 
       {/* Table */}
-      <MemberTable members={members as any} />
+      <MemberTable members={members as any} trainers={trainers} />
 
     </div>
   )

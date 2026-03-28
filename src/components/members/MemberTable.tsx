@@ -1,8 +1,12 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { addMonths } from 'date-fns'
 import { formatDate, daysUntil } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
 import { useRole } from '@/hooks/useRole'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface Member {
   id: string
@@ -12,17 +16,88 @@ interface Member {
   expiryDate: Date
   joinDate: Date
   plan: { name: string; price: number }
+  trainerId: string | null
   trainer: { name: string } | null
   _count: { checkins: number }
 }
 
-interface MemberTableProps {
-  members: Member[]
+interface TrainerOption {
+  id: string
+  name: string
 }
 
-export function MemberTable({ members }: MemberTableProps) {
+interface MemberTableProps {
+  members: Member[]
+  trainers: TrainerOption[]
+}
+
+const DURATION_OPTIONS = [1, 3, 6, 12] as const
+
+function getAllowedDurations(expiryDate: Date | string) {
+  const now = new Date()
+  const expiry = new Date(expiryDate)
+  return DURATION_OPTIONS.filter((months) => addMonths(now, months) <= expiry)
+}
+
+export function MemberTable({ members, trainers }: MemberTableProps) {
+  const router = useRouter()
   const { role } = useRole()
   const isTrainer = role === 'TRAINER'
+  const canAssignTrainer = role === 'OWNER' || role === 'RECEPTION'
+
+  const [assignOpen, setAssignOpen] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [selectedTrainerId, setSelectedTrainerId] = useState('')
+  const [selectedMonths, setSelectedMonths] = useState('')
+  const [assigning, setAssigning] = useState(false)
+  const [assignError, setAssignError] = useState('')
+
+  function openAssignDialog(member: Member) {
+    const allowedDurations = getAllowedDurations(member.expiryDate)
+    setSelectedMember(member)
+    setSelectedTrainerId('')
+    setSelectedMonths(allowedDurations.length > 0 ? String(allowedDurations[0]) : '')
+    setAssignError('')
+    setAssignOpen(true)
+  }
+
+  async function handleAssignTrainer() {
+    if (!selectedMember) return
+    if (!selectedTrainerId) {
+      setAssignError('Please select a trainer')
+      return
+    }
+    if (!selectedMonths) {
+      setAssignError('Please select a duration')
+      return
+    }
+
+    setAssigning(true)
+    setAssignError('')
+
+    const res = await fetch(`/api/members/${selectedMember.id}/assign-trainer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trainerId: selectedTrainerId,
+        months: Number(selectedMonths),
+      }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      setAssignError(data?.error ?? 'Failed to assign trainer')
+      setAssigning(false)
+      return
+    }
+
+    setAssignOpen(false)
+    setSelectedMember(null)
+    setSelectedTrainerId('')
+    setSelectedMonths('')
+    setAssigning(false)
+    router.refresh()
+  }
 
   if (members.length === 0) {
     return (
@@ -37,9 +112,14 @@ export function MemberTable({ members }: MemberTableProps) {
     )
   }
 
+  const allowedDurations = selectedMember ? getAllowedDurations(selectedMember.expiryDate) : []
+  const isAlreadyAssignedTrainerSelected = Boolean(
+    selectedMember?.trainerId && selectedTrainerId && selectedMember.trainerId === selectedTrainerId
+  )
+
   return (
     <>
-      {/* ── Card grid: visible below lg ── */}
+      {/* Card grid: visible below lg */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 lg:hidden">
         {members.map(m => {
           const days = daysUntil(m.expiryDate)
@@ -115,15 +195,26 @@ export function MemberTable({ members }: MemberTableProps) {
                 </div>
               </div>
 
-              {/* Card footer — View link */}
+              {/* Card footer - actions */}
               {!isTrainer && (
                 <div className="border-t border-border px-4 py-2.5 bg-muted/40">
-                  <Link
-                    href={`/dashboard/members/${m.id}`}
-                    className="text-[13px] font-semibold text-primary no-underline hover:underline"
-                  >
-                    View →
-                  </Link>
+                  <div className="flex items-center justify-between gap-2">
+                    {canAssignTrainer && (
+                      <button
+                        type="button"
+                        onClick={() => openAssignDialog(m)}
+                        className="text-[13px] font-semibold text-foreground bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer hover:bg-background transition-colors"
+                      >
+                        {m.trainer ? 'Change trainer' : 'Assign trainer'}
+                      </button>
+                    )}
+                    <Link
+                      href={`/dashboard/members/${m.id}`}
+                      className="text-[13px] font-semibold text-primary no-underline hover:underline"
+                    >
+                      View →
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -131,7 +222,7 @@ export function MemberTable({ members }: MemberTableProps) {
         })}
       </div>
 
-      {/* ── Table: visible at lg and above ── */}
+      {/* Table: visible at lg and above */}
       <div className="hidden lg:block bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full border-collapse text-[13px]">
           <thead>
@@ -196,15 +287,26 @@ export function MemberTable({ members }: MemberTableProps) {
                     )}
                   </td>
 
-                  {/* View link */}
+                  {/* Actions */}
                   {!isTrainer && (
                     <td className={td}>
-                      <Link
-                        href={`/dashboard/members/${m.id}`}
-                        className="text-[13px] font-semibold text-primary no-underline whitespace-nowrap hover:underline"
-                      >
-                        View →
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        {canAssignTrainer && (
+                          <button
+                            type="button"
+                            onClick={() => openAssignDialog(m)}
+                            className="text-[13px] font-semibold text-foreground bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer hover:bg-muted transition-colors whitespace-nowrap"
+                          >
+                            {m.trainer ? 'Change trainer' : 'Assign trainer'}
+                          </button>
+                        )}
+                        <Link
+                          href={`/dashboard/members/${m.id}`}
+                          className="text-[13px] font-semibold text-primary no-underline whitespace-nowrap hover:underline"
+                        >
+                          View →
+                        </Link>
+                      </div>
                     </td>
                   )}
 
@@ -214,6 +316,95 @@ export function MemberTable({ members }: MemberTableProps) {
           </tbody>
         </table>
       </div>
+
+      <Dialog
+        open={assignOpen}
+        onOpenChange={(open) => {
+          setAssignOpen(open)
+          if (!open) {
+            setAssignError('')
+            setAssigning(false)
+          }
+        }}
+      >
+        <DialogContent style={{ maxWidth: 460 }}>
+          <DialogHeader>
+            <DialogTitle>Assign trainer</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 mt-2">
+            <div className="text-sm text-muted-foreground">
+              {selectedMember ? `Member: ${selectedMember.name}` : ''}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-muted-foreground">Trainer *</label>
+              <select
+                value={selectedTrainerId}
+                onChange={(e) => setSelectedTrainerId(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border text-sm outline-none bg-background text-foreground box-border focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Select trainer</option>
+                {trainers.map((trainer) => (
+                  <option key={trainer.id} value={trainer.id}>
+                    {trainer.name}{selectedMember?.trainerId === trainer.id ? ' (Already assigned)' : ''}
+                  </option>
+                ))}
+              </select>
+              {isAlreadyAssignedTrainerSelected && (
+                <span className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                  Already assigned
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-muted-foreground">Duration *</label>
+              <select
+                value={selectedMonths}
+                onChange={(e) => setSelectedMonths(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border text-sm outline-none bg-background text-foreground box-border focus:ring-2 focus:ring-ring"
+                disabled={allowedDurations.length === 0}
+              >
+                {allowedDurations.length === 0 ? (
+                  <option value="">No valid duration (membership expires too soon)</option>
+                ) : (
+                  allowedDurations.map((months) => (
+                    <option key={months} value={months}>
+                      {months} month{months > 1 ? 's' : ''}
+                    </option>
+                  ))
+                )}
+              </select>
+              <p className="m-0 text-xs text-muted-foreground">
+                Duration cannot exceed member plan expiry date.
+              </p>
+            </div>
+
+            {assignError && (
+              <p className="m-0 text-xs text-red-600 dark:text-red-400">{assignError}</p>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleAssignTrainer}
+                disabled={assigning || !selectedMember || trainers.length === 0 || allowedDurations.length === 0}
+                className="px-4 py-2 rounded-lg border-none text-sm font-semibold transition-colors bg-foreground text-background cursor-pointer hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+              >
+                {assigning ? 'Assigning...' : 'Assign trainer'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignOpen(false)}
+                className="px-4 py-2 rounded-lg border border-border bg-card text-sm text-muted-foreground cursor-pointer hover:bg-muted hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

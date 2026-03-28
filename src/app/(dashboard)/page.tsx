@@ -23,6 +23,7 @@ export default async function DashboardPage() {
   const [
     totalMembers,
     activeMembers,
+    assignedMembers,
     expiredMembers,
     monthRevenue,
     expiringSoon,
@@ -30,6 +31,9 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     prisma.member.count({ where: { gymId } }),
     prisma.member.count({ where: { gymId, status: 'ACTIVE' } }),
+    isTrainer
+      ? prisma.member.count({ where: { gymId, trainerId: session!.user.id } })
+      : Promise.resolve(0),
     prisma.member.count({ where: { gymId, status: 'EXPIRED' } }),
     prisma.payment.aggregate({
       where: { member: { gymId }, paidAt: { gte: monthStart } },
@@ -86,8 +90,8 @@ export default async function DashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
         <KPICard
-          label="Active members"
-          value={activeMembers}
+          label={isTrainer ? 'Assigned members' : 'Active members'}
+          value={isTrainer ? assignedMembers : activeMembers}
           sub={`${totalMembers} total`}
           color="#1D9E75"
         />

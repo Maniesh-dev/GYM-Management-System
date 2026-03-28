@@ -37,7 +37,7 @@ export default async function BillingPage({
         }),
         prisma.member.findMany({
             where: { gymId, status: 'ACTIVE' },
-            select: { id: true, name: true, phone: true, planId: true },
+            select: { id: true, name: true, phone: true, planId: true, expiryDate: true },
             orderBy: { name: 'asc' },
         }),
         prisma.plan.findMany({

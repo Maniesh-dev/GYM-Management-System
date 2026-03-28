@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { paymentSchema, PaymentInput } from '@/lib/validations/payment.schema'
+import { daysUntil } from '@/lib/utils'
+import { useRole } from '@/hooks/useRole'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,7 +28,7 @@ const REF_LABEL: Record<string, string> = {
 }
 
 interface Props {
-    members: { id: string; name: string; phone: string; planId: string }[]
+    members: { id: string; name: string; phone: string; planId: string; expiryDate: Date | string }[]
     plans: { id: string; name: string; price: number }[]
     preselectedMemberId?: string
 
@@ -34,6 +36,7 @@ interface Props {
 
 export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props) {
     const router = useRouter()
+    const { role } = useRole()
     const [open, setOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
@@ -76,8 +79,12 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
     })
 
     const mode = form.watch('mode')
+    const memberIdWatch = form.watch('memberId')
     const planIdWatch = form.watch('planId')
     const showRef = ['UPI', 'CARD', 'CHEQUE'].includes(mode)
+    const canSeeMembershipAlert = role === 'OWNER' || role === 'RECEPTION'
+    const selectedMember = members.find((m) => m.id === memberIdWatch)
+    const remainingDays = selectedMember ? daysUntil(selectedMember.expiryDate) : null
 
     const calculateFinalAmount = useCallback((planPrice: number) => {
         const dVal = Number(discountValue)
@@ -221,6 +228,18 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
                         </div>
                         {form.formState.errors.memberId && (
                             <p style={err}>{form.formState.errors.memberId.message}</p>
+                        )}
+                        {canSeeMembershipAlert && selectedMember && remainingDays !== null && (
+                            <div style={{ marginTop: 2 }}>
+                                <p className="text-xs text-muted-foreground m-0">
+                                    Remaining days: {remainingDays >= 0 ? remainingDays : 0}
+                                </p>
+                                {remainingDays >= 0 && remainingDays < 7 && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold m-0 mt-1">
+                                        Membership expiry soon
+                                    </p>
+                                )}
+                            </div>
                         )}
                     </div>
 

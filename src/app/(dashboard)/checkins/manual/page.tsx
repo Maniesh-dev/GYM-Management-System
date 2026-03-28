@@ -179,6 +179,8 @@ export default function ManualCheckinPage() {
 
     const cfg = foundMember ? STATUS_CFG[foundMember.status] : null
     const isSelfChecking = mode === 'STAFF' && foundStaff?.id === session?.user?.id && session?.user?.role === 'RECEPTION'
+    const canManageStaffAttendance = session?.user?.role === 'OWNER' || session?.user?.role === 'RECEPTION'
+    const disableStaffCheckIn = mode === 'STAFF' && !!foundStaff?.alreadyIn && !checkinResult && canManageStaffAttendance
 
     // ── Styles ──────────────────────────────────────────────────────
     const pageClass = "min-h-screen bg-background flex items-start justify-center py-10 px-5"
@@ -334,10 +336,13 @@ export default function ManualCheckinPage() {
                                 <div className="text-[11px] mb-3 text-muted-foreground uppercase tracking-wider px-1">Select action</div>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setStaffType('IN')}
-                                        className={`flex-1 py-3 rounded-xl border font-black text-sm transition-all ${staffType === 'IN' ? 'bg-[#1D9E75] text-white border-[#1D9E75] shadow-sm shadow-emerald-100 dark:shadow-none' : 'bg-background text-foreground border-border hover:bg-muted/50'}`}
+                                        onClick={() => {
+                                            if (!disableStaffCheckIn) setStaffType('IN')
+                                        }}
+                                        disabled={disableStaffCheckIn}
+                                        className={`flex-1 py-3 rounded-xl border font-black text-sm transition-all ${staffType === 'IN' ? 'bg-[#1D9E75] text-white border-[#1D9E75] shadow-sm shadow-emerald-100 dark:shadow-none' : 'bg-background text-foreground border-border hover:bg-muted/50'} ${disableStaffCheckIn ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
-                                        Check In
+                                        {disableStaffCheckIn ? 'Already checked IN' : 'Check In'}
                                     </button>
                                     <button
                                         onClick={() => setStaffType('OUT')}
