@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getISTStartOfDay } from '@/lib/utils'
 import { TrainerQRCard } from '@/components/staff/TrainerQRCard'
 import { TerminateButton } from '@/components/staff/TerminateButton'
 import Link from 'next/link'
@@ -8,13 +8,14 @@ import Link from 'next/link'
 export default async function StaffPage() {
     const session = await auth()
     const gymId = session!.user.gymId
+    const todayStart = getISTStartOfDay()
 
     const staff = await prisma.user.findMany({
         where: { gymId, role: { in: ['TRAINER', 'RECEPTION'] }, isActive: true },
         include: {
             assignedMembers: { select: { id: true } },
             trainerCheckins: {
-                where: { checkedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+                where: { checkedAt: { gte: todayStart } },
                 orderBy: { checkedAt: 'desc' },
                 take: 1,
             },
@@ -76,7 +77,7 @@ export default async function StaffPage() {
                                         <div>{s.assignedMembers.length} members assigned</div>
                                     )}
                                     {last && (
-                                        <div>Last scan: {last.type} at {new Date(last.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div>Last scan: {last.type} at {new Date(last.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</div>
                                     )}
                                     <div>Joined {formatDate(s.createdAt)}</div>
                                 </div>

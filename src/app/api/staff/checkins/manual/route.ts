@@ -1,10 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { withRole } from '@/lib/withRole'
 import { prisma } from '@/lib/db'
+import { getISTStartOfDay } from '@/lib/utils'
 
 // GET — search staff by name or phone
 export const GET = withRole('checkins:write', async (req, { session }) => {
     const q = new URL(req.url).searchParams.get('q')?.trim()
+    const todayStart = getISTStartOfDay()
 
     if (!q) {
         return NextResponse.json(
@@ -16,6 +18,7 @@ export const GET = withRole('checkins:write', async (req, { session }) => {
     const staff = await prisma.user.findMany({
         where: {
             gymId: session!.user.gymId,
+            isActive: true,
             OR: [
                 { name: { contains: q, mode: 'insensitive' } },
                 { phone: { contains: q } },
@@ -23,6 +26,7 @@ export const GET = withRole('checkins:write', async (req, { session }) => {
         },
         include: {
             trainerCheckins: {
+                where: { checkedAt: { gte: todayStart } },
                 orderBy: { checkedAt: 'desc' },
                 take: 1,
             },
@@ -32,8 +36,7 @@ export const GET = withRole('checkins:write', async (req, { session }) => {
 
     return NextResponse.json(staff.map(s => {
         const last = s.trainerCheckins[0]
-        const alreadyIn = last?.type === 'IN' && 
-            new Date(last.checkedAt).getTime() > Date.now() - 12 * 60 * 60 * 1000 // 12h threshold for staff
+        const alreadyIn = last?.type === 'IN'
 
         return {
             id: s.id,
@@ -75,7 +78,7 @@ export const POST = withRole('checkins:write', async (req, { session }) => {
         status = 'PENDING'
     }
 
-    const checkin = await (prisma.trainerCheckin as any).create({
+    const checkin = await prisma.trainerCheckin.create({
         data: {
             userId,
             gymId: session!.user.gymId,

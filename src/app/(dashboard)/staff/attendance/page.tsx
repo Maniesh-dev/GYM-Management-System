@@ -11,6 +11,13 @@ export default async function AttendancePage({
     const session = await auth()
     const gymId = session!.user.gymId
     const searchParams = await searchParamsPromise
+    type AttendanceLog = {
+        id: string
+        checkedAt: Date
+        type: string
+        method: string
+        status: string
+    }
 
     // Get current date string in IST if no date selected
     const dateStr = searchParams.date ?? getISTDateString()
@@ -36,8 +43,9 @@ export default async function AttendancePage({
     // Group logs by user and calculate hours
     const byUser: Record<string, {
         name: string; role: string
-        logs: any[]
+        logs: AttendanceLog[]
         hoursWorked: number
+        currentlyClockedIn: boolean
     }> = {}
 
     // Initialize with selected staff member(s)
@@ -47,7 +55,7 @@ export default async function AttendancePage({
 
         byUser[s.id] = {
             name: s.name, role: s.role,
-            logs: [], hoursWorked: 0,
+            logs: [], hoursWorked: 0, currentlyClockedIn: false,
         }
     })
 
@@ -61,22 +69,26 @@ export default async function AttendancePage({
     Object.values(byUser).forEach(u => {
         let totalMs = 0
         let lastIn: Date | null = null
+        let lastApprovedType: 'IN' | 'OUT' | null = null
         u.logs.forEach(l => {
             // Only count approved check-ins for hours
             if (l.status === 'PENDING') return
 
             if (l.type === 'IN') {
                 lastIn = l.checkedAt
+                lastApprovedType = 'IN'
             } else if (l.type === 'OUT' && lastIn) {
                 totalMs += l.checkedAt.getTime() - lastIn.getTime()
                 lastIn = null
+                lastApprovedType = 'OUT'
             }
         })
         u.hoursWorked = totalMs / (1000 * 60 * 60)
+        u.currentlyClockedIn = lastApprovedType === 'IN'
     })
 
     const fmt = (d: Date) =>
-        new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
 
     const card: React.CSSProperties = {
         background: 'var(--color-background-primary)',
@@ -148,7 +160,7 @@ export default async function AttendancePage({
                                         ${data.role === 'TRAINER'
                                             ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400'
                                             : 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400'}
-                                        ${data.role === 'RECEPTIONIST'
+                                        ${data.role === 'RECEPTION'
                                             ? 'bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800 text-green-700 dark:text-green-400'
                                             : 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400'}
                                     `}>
@@ -159,7 +171,9 @@ export default async function AttendancePage({
                                     <p className="text-sm font-black text-foreground">
                                         {data.hoursWorked > 0
                                             ? `${data.hoursWorked.toFixed(1)} hrs`
-                                            : 'Clocked in'}
+                                            : data.currentlyClockedIn
+                                                ? 'Clocked in'
+                                                : '0.0 hrs'}
                                     </p>
                                     <p className="text-[11px] text-muted-foreground mt-0.5">
                                         {data.logs.length} records today

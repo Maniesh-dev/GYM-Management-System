@@ -1,13 +1,13 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getISTStartOfDay } from '@/lib/utils'
 import Link from 'next/link'
 
 export default async function CheckinsPage() {
     const session = await auth()
     const gymId = session!.user.gymId
 
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
+    const todayStart = getISTStartOfDay()
 
     const [memberCheckins, trainerCheckins] = await Promise.all([
         prisma.checkin.findMany({
@@ -30,7 +30,7 @@ export default async function CheckinsPage() {
         orderBy: { name: 'asc' },
     })
 
-    const fmt = (d: Date) => new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    const fmt = (d: Date) => new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
 
     const card: React.CSSProperties = {
         background: 'var(--color-background-primary)',

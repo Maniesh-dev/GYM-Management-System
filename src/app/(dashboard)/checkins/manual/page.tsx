@@ -78,7 +78,7 @@ export default function ManualCheckinPage() {
                 ? `/api/checkins/manual?phone=${encodeURIComponent(query.trim())}`
                 : `/api/staff/checkins/manual?q=${encodeURIComponent(query.trim())}`
 
-            const res = await fetch(endpoint)
+            const res = await fetch(endpoint, { cache: 'no-store' })
             const data = await res.json()
 
             if (!res.ok) {
@@ -101,7 +101,7 @@ export default function ManualCheckinPage() {
                 }
                 toast.success(`${mode} found`)
             }
-        } catch (err: any) {
+        } catch {
             toast.error('Search failed')
         } finally {
             setSearching(false)
@@ -144,13 +144,18 @@ export default function ManualCheckinPage() {
                 if (mode === 'MEMBER') {
                     setFoundMember(prev => prev ? { ...prev, alreadyIn: true } : null)
                 } else {
-                    setFoundStaff(prev => prev ? { ...prev, alreadyIn: staffType === 'IN', lastType: staffType } : null)
+                    setFoundStaff(prev => prev ? {
+                        ...prev,
+                        alreadyIn: staffType === 'IN',
+                        lastType: staffType,
+                        lastCheckin: new Date().toISOString(),
+                    } : null)
                 }
             } else {
                 const err = data.error || 'Failed to record entry'
                 toast.error(err)
             }
-        } catch (err: any) {
+        } catch {
             toast.error('An error occurred')
         } finally {
             setConfirming(false)
@@ -347,7 +352,7 @@ export default function ManualCheckinPage() {
                         {foundStaff.lastCheckin && !checkinResult && (
                             <div className="mb-6 p-3.5 rounded-xl bg-muted/30 border border-border text-[11px] text-muted-foreground flex justify-between items-center">
                                 <span className="font-medium uppercase tracking-wider">Yesterday & Previous</span>
-                                <span className="text-foreground">Last: {foundStaff.lastType} · {new Date(foundStaff.lastCheckin).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="text-foreground">Last: {foundStaff.lastType} · {new Date(foundStaff.lastCheckin).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>
                             </div>
                         )}
 
