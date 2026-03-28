@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { formatCurrency, getISTDate } from '@/lib/utils'
 import { RevenueChartWithFilter } from '@/components/reports/RevenueChartWithFilter'
 import { PlanPieChart } from '@/components/reports/PlanPieChart'
+import Link from 'next/link'
 
 export default async function ReportsPage() {
     const session = await auth()
@@ -11,20 +12,29 @@ export default async function ReportsPage() {
     // Use IST-corrected dates for accurate "this month" calculations
     const now = getISTDate()
     const istMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const missingCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
     // Fetch up to 5 years ago for 'All Time' filter
     const maxHistoryDate = new Date(now.getFullYear() - 5, now.getMonth(), 1)
 
     const [
-        totalMembers, activeMembers, expiredMembers, frozenMembers,
+        totalMembers, activeMembers, expiredMembers, frozenMembers, expiringWithinWeek,
         monthRevenue, totalRevenue,
         newThisMonth, cancelledThisMonth,
         paymentsByMode, planDistribution,
-        monthlyPayments, trainerStats,
+        monthlyPayments, trainerStats, missingMembers, expiredMembersList,
     ] = await Promise.all([
         prisma.member.count({ where: { gymId } }),
         prisma.member.count({ where: { gymId, status: 'ACTIVE' } }),
         prisma.member.count({ where: { gymId, status: 'EXPIRED' } }),
         prisma.member.count({ where: { gymId, status: 'FROZEN' } }),
+        prisma.member.count({
+            where: {
+                gymId,
+                status: 'ACTIVE',
+                expiryDate: { gte: now, lte: weekFromNow },
+            },
+        }),
         prisma.payment.aggregate({
             where: { member: { gymId }, paidAt: { gte: istMonthStart } },
             _sum: { amount: true },
@@ -59,6 +69,37 @@ export default async function ReportsPage() {
             where: { gymId, role: 'TRAINER' },
             include: { assignedMembers: { select: { id: true } } },
         }),
+        prisma.member.findMany({
+            where: {
+                gymId,
+                status: 'ACTIVE',
+                checkins: {
+                    none: { checkedAt: { gte: missingCutoff } },
+                },
+            },
+            include: {
+                checkins: {
+                    orderBy: { checkedAt: 'desc' },
+                    take: 1,
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 8,
+        }),
+        prisma.member.findMany({
+            where: {
+                gymId,
+                status: 'EXPIRED',
+            },
+            include: {
+                checkins: {
+                    orderBy: { checkedAt: 'desc' },
+                    take: 1,
+                },
+            },
+            orderBy: { expiryDate: 'asc' },
+            take: 8,
+        }),
     ])
 
     // Plan distribution labels
@@ -70,7 +111,7 @@ export default async function ReportsPage() {
     }))
 
     const kpi = (label: string, value: string | number, sub?: string, color = '#10b981') => (
-        <div 
+        <div
             className="bg-card border border-border rounded-xl p-4 md:p-5 shadow-sm transition-all hover:shadow-md"
             style={{ borderLeft: `4px solid ${color}` }}
         >
@@ -91,7 +132,7 @@ export default async function ReportsPage() {
 
             {/* KPI row */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                {kpi('Active members', activeMembers, `${expiredMembers} expired`, '#10b981')}
+                {kpi('About to expire', expiringWithinWeek, 'next 7 days', '#10b981')}
                 {kpi('Revenue / Month', formatCurrency(monthRevenue._sum.amount ?? 0), 'this month', '#6366f1')}
                 {kpi('Total revenue', formatCurrency(totalRevenue._sum.amount ?? 0), 'all time', '#3b82f6')}
                 {kpi('New this month', newThisMonth, `${cancelledThisMonth} cancelled`, '#f59e0b')}
@@ -171,6 +212,74 @@ export default async function ReportsPage() {
                     </div>
                 </div>
 
+            </div>
+
+            <div className={cardClass}>
+                <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-sm font-bold text-foreground opacity-80 uppercase tracking-tight">
+                        Missing members (&gt;3 days)
+                    </h3>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-bold border border-rose-100 dark:border-rose-900/60">
+                        {missingMembers.length}
+                    </span>
+                </div>
+                {missingMembers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg m-0">
+                        No missing members
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {missingMembers.map((m) => (
+                            <Link
+                                key={m.id}
+                                href={`/dashboard/members/${m.id}`}
+                                className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors no-underline"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-foreground truncate m-0">{m.name}</p>
+                                    <p className="text-[11px] text-muted-foreground m-0 mt-1">
+                                        Last check-in: {m.checkins[0] ? new Date(m.checkins[0].checkedAt).toLocaleDateString('en-IN') : 'Never'}
+                                    </p>
+                                </div>
+                                <span className="text-xs font-bold text-primary whitespace-nowrap">View →</span>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className={cardClass}>
+                <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-sm font-bold text-foreground opacity-80 uppercase tracking-tight">
+                        Expired memberships
+                    </h3>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-bold border border-rose-100 dark:border-rose-900/60">
+                        {expiredMembersList.length}
+                    </span>
+                </div>
+                {expiredMembersList.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg m-0">
+                        No expired memberships
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {expiredMembersList.map((m) => (
+                            <Link
+                                key={m.id}
+                                href={`/dashboard/members/${m.id}`}
+                                className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors no-underline"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-foreground truncate m-0">{m.name}</p>
+                                    <p className="text-[11px] text-muted-foreground m-0 mt-1">
+                                        Expired on: {new Date(m.expiryDate).toLocaleDateString('en-IN')}
+                                    </p>
+                                </div>
+                                <span className="text-xs font-bold text-primary whitespace-nowrap">View →</span>
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     )

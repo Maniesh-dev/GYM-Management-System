@@ -1,11 +1,11 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { formatCurrency, getISTStartOfDay, getISTDate } from '@/lib/utils'
+import { getISTStartOfDay, getISTDate } from '@/lib/utils'
 import { KPICard } from '@/components/dashboard/KPICard'
 import { ExpiringList } from '@/components/dashboard/ExpiringList'
 import { RecentCheckins } from '@/components/dashboard/RecentCheckins'
 import { QuickActions } from '@/components/dashboard/QuickActions'
-import { Clock } from '@/components/dashboard/Clock'
+import Link from 'next/link'
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -17,15 +17,16 @@ export default async function DashboardPage() {
   // Use UTC Date that corresponds to 00:00:00 IST for Prisma queries
   const todayStart = getISTStartOfDay()
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const missingCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+  const weekFromNowEnd = new Date(todayStart.getTime() + 8 * 24 * 60 * 60 * 1000 - 1)
 
   const [
     totalMembers,
     activeMembers,
     assignedMembers,
     expiredMembers,
-    monthRevenue,
+    missingMembersCount,
+    missingMembers,
     expiringSoon,
     todayCheckins,
   ] = await Promise.all([
@@ -35,15 +36,41 @@ export default async function DashboardPage() {
       ? prisma.member.count({ where: { gymId, trainerId: session!.user.id } })
       : Promise.resolve(0),
     prisma.member.count({ where: { gymId, status: 'EXPIRED' } }),
-    prisma.payment.aggregate({
-      where: { member: { gymId }, paidAt: { gte: monthStart } },
-      _sum: { amount: true },
-    }),
+    isTrainer
+      ? Promise.resolve(0)
+      : prisma.member.count({
+        where: {
+          gymId,
+          status: 'ACTIVE',
+          checkins: {
+            none: { checkedAt: { gte: missingCutoff } },
+          },
+        },
+      }),
+    isTrainer
+      ? Promise.resolve([])
+      : prisma.member.findMany({
+        where: {
+          gymId,
+          status: 'ACTIVE',
+          checkins: {
+            none: { checkedAt: { gte: missingCutoff } },
+          },
+        },
+        include: {
+          checkins: {
+            orderBy: { checkedAt: 'desc' },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+      }),
     prisma.member.findMany({
       where: {
         gymId,
         status: 'ACTIVE',
-        expiryDate: { gte: now, lte: weekFromNow },
+        expiryDate: { gte: todayStart, lte: weekFromNowEnd },
       },
       include: { plan: { select: { name: true } } },
       orderBy: { expiryDate: 'asc' },
@@ -97,9 +124,9 @@ export default async function DashboardPage() {
         />
         {!isTrainer && (
           <KPICard
-            label="Revenue this month"
-            value={formatCurrency(monthRevenue._sum.amount ?? 0)}
-            sub={now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            label="Missing members"
+            value={missingMembersCount}
+            sub="> 3 days no check-in"
             color="#534AB7"
           />
         )}
@@ -132,6 +159,12 @@ export default async function DashboardPage() {
                 {expiringSoon.length}
               </span>
             </h2>
+            <Link
+              href="/dashboard/members/expired"
+              className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
+            >
+              View all &rarr;
+            </Link>
           </div>
           <ExpiringList members={expiringSoon} />
         </div>
@@ -147,6 +180,48 @@ export default async function DashboardPage() {
         )}
 
       </div>
+
+      {!isTrainer && (
+        <div className={`${cardClass} mb-5`}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[15px] font-bold text-foreground m-0 flex items-center">
+              Missing members (&gt;3 days)
+              <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+                {missingMembers.length}
+              </span>
+            </h2>
+            <Link
+              href="/dashboard/members/missing"
+              className="text-xs text-muted-foreground no-underline hover:text-foreground transition-colors"
+            >
+              View all &rarr;
+            </Link>
+          </div>
+          {missingMembers.length === 0 ? (
+            <p className="p-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-lg m-0">
+              No missing members
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {missingMembers.map((m) => (
+                <Link
+                  key={m.id}
+                  href={`/dashboard/members/${m.id}`}
+                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors no-underline"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate m-0">{m.name}</p>
+                    <p className="text-[11px] text-muted-foreground m-0 mt-1">
+                      Last check-in: {m.checkins[0] ? new Date(m.checkins[0].checkedAt).toLocaleDateString('en-IN') : 'Never'}
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-primary whitespace-nowrap">View →</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Today's check-ins full list */}
       <div className={cardClass}>

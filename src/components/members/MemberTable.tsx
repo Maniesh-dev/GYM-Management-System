@@ -295,7 +295,7 @@ export function MemberTable({ members, trainers }: MemberTableProps) {
                           <button
                             type="button"
                             onClick={() => openAssignDialog(m)}
-                            className="text-[13px] font-semibold text-foreground bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer hover:bg-muted transition-colors whitespace-nowrap"
+                            className={`text-[13px] font-semibold text-foreground bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer hover:bg-muted transition-colors whitespace-nowrap ${m.trainer ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}
                           >
                             {m.trainer ? 'Change trainer' : 'Assign trainer'}
                           </button>

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { withRole } from '@/lib/withRole'
 import { prisma } from '@/lib/db'
-import { getISTStartOfDay } from '@/lib/utils'
+import { getISTDate, getISTStartOfDay } from '@/lib/utils'
 
 // GET — search member by phone number
 export const GET = withRole('checkins:write', async (req, { session }) => {
@@ -83,6 +83,21 @@ export const POST = withRole('checkins:write', async (req, { session }) => {
             { status: 404 }
         )
     }
+    const now = getISTDate()
+
+    if (member.status === 'FROZEN') {
+        return NextResponse.json(
+            { error: 'Membership is currently frozen', status: 'FROZEN' },
+            { status: 403 }
+        )
+    }
+
+    if (member.status !== 'ACTIVE' || member.expiryDate < now) {
+        return NextResponse.json(
+            { error: 'Membership is expired or inactive', status: 'EXPIRED' },
+            { status: 403 }
+        )
+    }
 
     // Block duplicate check-in for the same day (IST)
     const todayStart = getISTStartOfDay()
@@ -108,4 +123,4 @@ export const POST = withRole('checkins:write', async (req, { session }) => {
     })
 
     return NextResponse.json({ success: true, checkin }, { status: 201 })
-})
+})

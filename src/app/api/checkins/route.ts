@@ -1,15 +1,28 @@
 import { NextResponse } from 'next/server'
 import { withRole } from '@/lib/withRole'
 import { prisma } from '@/lib/db'
-import { getISTStartOfDay } from '@/lib/utils'
+import { getISTDate, getISTStartOfDay } from '@/lib/utils'
 
 export const POST = withRole('checkins:write', async (req, { session }) => {
     const { memberId } = await req.json()
+    const now = getISTDate()
 
     const member = await prisma.member.findUnique({
         where: { id: memberId, gymId: session!.user.gymId },
     })
     if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    if (member.status === 'FROZEN') {
+        return NextResponse.json(
+            { error: 'Membership is currently frozen', status: 'FROZEN' },
+            { status: 403 }
+        )
+    }
+    if (member.status !== 'ACTIVE' || member.expiryDate < now) {
+        return NextResponse.json(
+            { error: 'Membership is expired or inactive', status: 'EXPIRED' },
+            { status: 403 }
+        )
+    }
 
     const todayStart = getISTStartOfDay()
     const existingCheckin = await prisma.checkin.findFirst({

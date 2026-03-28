@@ -10,6 +10,8 @@ import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react'
 const NAV = [
     { label: 'Dashboard', href: '/dashboard', permission: null },
     { label: 'Members', href: '/dashboard/members', permission: 'members:read' },
+    { label: 'Missing Members', href: '/dashboard/members/missing', permission: 'members:write' },
+    { label: 'Expired Members', href: '/dashboard/members/expired', permission: 'members:write' },
     { label: 'Attendance', href: '/dashboard/staff/attendance', permission: 'staff:manage' },
     { label: 'Check-ins', href: '/dashboard/checkins', permission: 'checkins:read' },
     { label: 'Billing', href: '/dashboard/billing', permission: 'billing:read' },

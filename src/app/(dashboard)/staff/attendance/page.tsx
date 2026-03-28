@@ -99,7 +99,7 @@ export default async function AttendancePage({
     const isOwner = session!.user.role === 'OWNER'
 
     return (
-        <div style={{ padding: '28px 32px', maxWidth: 800 }}>
+        <div style={{ padding: '28px 28px', maxWidth: 800 }}>
             <h1 style={{ fontSize: 22, fontWeight: 500, marginBottom: 20 }}>Staff attendance</h1>
 
             {/* Filters */}
@@ -108,10 +108,11 @@ export default async function AttendancePage({
                     name="date"
                     type="date"
                     defaultValue={dateStr}
+                    className='border border-zinc-100/10 px-2'
                     style={{
                         padding: '8px 12px', borderRadius: 8, fontSize: 13,
                         border: '0.5px solid var(--color-border-secondary)',
-                        background: 'var(--color-background-primary)',
+                        background: 'var(--color-background-secondary)',
                         color: 'var(--color-text-primary)',
                     }}
                 />
@@ -120,7 +121,7 @@ export default async function AttendancePage({
                     defaultValue={searchParams.userId ?? ''}
                     className='border border-zinc-100/10 px-2'
                     style={{
-                        padding: '8px 12px', borderRadius: 8, fontSize: 13,
+                        padding: '8px 5px', borderRadius: 8, fontSize: 13,
                         background: 'var(--color-background-primary)',
                         color: 'var(--color-text-primary)',
                     }}
