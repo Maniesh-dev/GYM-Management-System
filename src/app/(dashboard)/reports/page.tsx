@@ -3,17 +3,27 @@ import { prisma } from '@/lib/db'
 import { formatCurrency, getISTDate } from '@/lib/utils'
 import { RevenueChartWithFilter } from '@/components/reports/RevenueChartWithFilter'
 import { PlanPieChart } from '@/components/reports/PlanPieChart'
+import { MemberLifecycleTrendChart } from '@/components/reports/MemberLifecycleTrendChart'
 import Link from 'next/link'
 
 export default async function ReportsPage() {
     const session = await auth()
     const gymId = session!.user.gymId
+    const canViewMonthlyMemberReport = session!.user.role === 'OWNER' || session!.user.role === 'RECEPTION'
 
     // Use IST-corrected dates for accurate "this month" calculations
     const now = getISTDate()
     const istMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     const missingCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+    const trendMonths = Array.from({ length: 6 }, (_, idx) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1)
+        return {
+            label: d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
+            start: new Date(d.getFullYear(), d.getMonth(), 1),
+            end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+        }
+    })
     // Fetch up to 5 years ago for 'All Time' filter
     const maxHistoryDate = new Date(now.getFullYear() - 5, now.getMonth(), 1)
 
@@ -22,7 +32,7 @@ export default async function ReportsPage() {
         monthRevenue, totalRevenue,
         newThisMonth, cancelledThisMonth,
         paymentsByMode, planDistribution,
-        monthlyPayments, trainerStats, missingMembers, expiredMembersList,
+        monthlyPayments, trainerStats, missingMembers, expiredMembersList, monthlyMemberReport,
     ] = await Promise.all([
         prisma.member.count({ where: { gymId } }),
         prisma.member.count({ where: { gymId, status: 'ACTIVE' } }),
@@ -100,6 +110,38 @@ export default async function ReportsPage() {
             orderBy: { expiryDate: 'asc' },
             take: 8,
         }),
+        canViewMonthlyMemberReport
+            ? Promise.all(
+                trendMonths.map(async ({ label, start, end }) => {
+                    const [newMembers, monthMissingMembers, monthExpiredMembers] = await Promise.all([
+                        prisma.member.count({
+                            where: { gymId, joinDate: { gte: start, lte: end } },
+                        }),
+                        prisma.member.count({
+                            where: {
+                                gymId,
+                                status: 'ACTIVE',
+                                checkins: { none: { checkedAt: { gte: start, lte: end } } },
+                            },
+                        }),
+                        prisma.member.count({
+                            where: {
+                                gymId,
+                                status: 'EXPIRED',
+                                expiryDate: { gte: start, lte: end },
+                            },
+                        }),
+                    ])
+
+                    return {
+                        month: label,
+                        newMembers,
+                        missingMembers: monthMissingMembers,
+                        expiredMembers: monthExpiredMembers,
+                    }
+                })
+            )
+            : Promise.resolve([]),
     ])
 
     // Plan distribution labels
@@ -138,6 +180,8 @@ export default async function ReportsPage() {
                 {kpi('New this month', newThisMonth, `${cancelledThisMonth} cancelled`, '#f59e0b')}
             </div>
 
+
+
             {/* Member status breakdown */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 {[
@@ -164,6 +208,22 @@ export default async function ReportsPage() {
                     </div>
                 </div>
             </div>
+
+            {canViewMonthlyMemberReport && (
+                <div className={cardClass}>
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-sm font-bold text-foreground opacity-80 uppercase tracking-tight">
+                            Monthly Member Report
+                        </h3>
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-bold border border-emerald-100 dark:border-emerald-900/60">
+                            Last 6 months
+                        </span>
+                    </div>
+                    <div className="h-[320px]">
+                        <MemberLifecycleTrendChart data={monthlyMemberReport} />
+                    </div>
+                </div>
+            )}
 
             {/* Payment mode breakdown + Trainer stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
