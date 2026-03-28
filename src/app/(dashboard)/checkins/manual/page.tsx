@@ -2,7 +2,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'react-hot-toast'
-import { Unauthorized } from '@/components/Unauthorized'
 
 type MemberStatus = 'ACTIVE' | 'EXPIRED' | 'FROZEN' | 'CANCELLED'
 
@@ -41,7 +40,7 @@ const STATUS_CFG: Record<MemberStatus, { bg: string; border: string; text: strin
 }
 
 export default function ManualCheckinPage() {
-    const { data: session, status: sessionStatus } = useSession()
+    const { data: session } = useSession()
     const inputRef = useRef<HTMLInputElement>(null)
 
     const [mode, setMode] = useState<Mode>('MEMBER')
@@ -61,14 +60,6 @@ export default function ManualCheckinPage() {
             setStaffType(foundStaff.alreadyIn ? 'OUT' : 'IN')
         }
     }, [foundStaff])
-
-    // Loading state
-    if (sessionStatus === 'loading') return null
-
-    // Role check
-    if (sessionStatus === 'authenticated' && session?.user?.role === 'TRAINER') {
-        return <Unauthorized />
-    }
 
     // ── Search ──────────────────────────────────────────────────────
     async function handleSearch(e: React.FormEvent) {
@@ -389,4 +380,3 @@ export default function ManualCheckinPage() {
         </div>
     )
 }
-

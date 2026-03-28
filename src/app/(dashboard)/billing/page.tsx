@@ -1,115 +1,196 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { notFound } from 'next/navigation'
-import { Unauthorized } from '@/components/Unauthorized'
+import { formatDate, formatCurrency } from '@/lib/utils'
+import { PaymentFormDialog } from '@/components/billing/PaymentForm'
+import { ReceiptButton } from '@/components/billing/ReceiptButton'
+import Link from 'next/link'
 
-export default async function BillingPage() {
+const MODE_STYLE: Record<string, React.CSSProperties> = {
+    CASH: { background: '#E1F5EE', color: '#085041' },
+    UPI: { background: '#EEEDFE', color: '#3C3489' },
+    CARD: { background: '#E6F1FB', color: '#0C447C' },
+    CHEQUE: { background: '#FAEEDA', color: '#633806' },
+}
+
+export default async function BillingPage({
+    searchParams: searchParamsPromise,
+}: {
+    searchParams: Promise<{ memberId?: string }>
+}) {
     const session = await auth()
-
-    if (session!.user.role === 'TRAINER') {
-        return <Unauthorized />
-    }
-
     const gymId = session!.user.gymId
+    const searchParams = await searchParamsPromise
+    const memberId = searchParams.memberId
 
-    // Get recent payments for this gym
-    const payments = await prisma.payment.findMany({
-        where: { member: { gymId } },
-        include: {
-            member: { select: { name: true, phone: true } },
-            recordedBy: { select: { name: true } },
-        },
-        orderBy: { paidAt: 'desc' },
-        take: 50,
-    })
+    const [payments, members, plans] = await Promise.all([
+        prisma.payment.findMany({
+            where: {
+                member: { gymId },
+                ...(memberId ? { memberId } : {}),
+            },
+            include: {
+                member: { select: { id: true, name: true, phone: true } },
+                recordedBy: { select: { name: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 100,
+        }),
+        prisma.member.findMany({
+            where: { gymId, status: 'ACTIVE' },
+            select: { id: true, name: true, phone: true, planId: true },
+            orderBy: { name: 'asc' },
+        }),
+        prisma.plan.findMany({
+            where: { gymId, isActive: true },
+            orderBy: { price: 'asc' },
+        }),
+    ])
 
-    // Calculate basic stats
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    const stats = await prisma.payment.aggregate({
-        where: { member: { gymId }, paidAt: { gte: monthStart } },
-        _sum: { amount: true },
-        _count: true,
-    })
+    const canRecord = ['OWNER', 'RECEPTION'].includes(session!.user.role)
 
-    const cardClass = "bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col items-center justify-center text-center"
+    const totalAmount = payments.reduce((sum: number, p) => sum + p.amount, 0)
 
     return (
-        <div className="p-4 md:p-8 max-w-5xl mx-auto">
+        <div className="p-4 md:p-7 max-w-[1000px]">
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">Billing & Payments</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Review your revenue and transaction history.</p>
+                    <h1 className="text-[22px] font-bold text-foreground m-0 mb-1">Billing</h1>
+                    <p className="text-[13px] text-muted-foreground m-0">
+                        {payments.length} payments · {formatCurrency(totalAmount)} total
+                    </p>
                 </div>
+                {canRecord && (
+                    <PaymentFormDialog members={members} plans={plans} />
+                )}
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
-                <div className={cardClass}>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5 opacity-60">Revenue this month</p>
-                    <h2 className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
-                        {formatCurrency(stats._sum.amount ?? 0)}
-                    </h2>
-                </div>
-                <div className={cardClass}>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5 opacity-60">Total Transactions</p>
-                    <h2 className="text-3xl font-black text-foreground">
-                        {stats._count}
-                    </h2>
-                </div>
-            </div>
-
-            {/* Payments list */}
-            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-border bg-muted/30">
-                    <h3 className="text-sm font-bold text-foreground m-0">Transaction History</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Last 50 payments processed.</p>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-left text-sm">
-                        <thead>
-                            <tr className="bg-muted text-[11px] font-black uppercase text-muted-foreground tracking-wider border-b border-border">
-                                <th className="p-4">Member</th>
-                                <th className="p-4">Amount</th>
-                                <th className="p-4">Mode</th>
-                                <th className="p-4">Date</th>
-                                <th className="p-4">Recorded By</th>
+            {/* Desktop Table View (lg and above) */}
+            <div className="hidden lg:block bg-card border border-border rounded-xl overflow-x-auto">
+                <table className="w-full border-collapse text-[13px] min-w-[800px]">
+                    <thead>
+                        <tr className="bg-muted border-b border-border">
+                            {['Member', 'Amount', 'Mode', 'Reference', 'Date', 'Recorded by', 'Receipt'].map(h => (
+                                <th key={h} className="p-3.5 text-left font-medium text-xs text-muted-foreground whitespace-nowrap">
+                                    {h}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {payments.map((p) => (
+                            <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                                <td className="p-4 align-middle">
+                                    <Link 
+                                        href={`/dashboard/members/${p.member.id}`}
+                                        className="font-semibold text-foreground hover:text-primary transition-colors inline-block"
+                                    >
+                                        {p.member.name}
+                                    </Link>
+                                    <div className="text-[11px] text-muted-foreground">{p.member.phone}</div>
+                                </td>
+                                <td className="p-4 align-middle font-bold text-foreground">
+                                    {formatCurrency(p.amount)}
+                                </td>
+                                <td className="p-4 align-middle">
+                                    <span style={{
+                                        ...MODE_STYLE[p.mode],
+                                        fontSize: 11, padding: '3px 8px',
+                                        borderRadius: 4, fontWeight: 500,
+                                    }}>
+                                        {p.mode}
+                                    </span>
+                                </td>
+                                <td className="p-4 align-middle text-muted-foreground whitespace-nowrap">
+                                    {p.referenceNo ?? '—'}
+                                </td>
+                                <td className="p-4 align-middle text-muted-foreground whitespace-nowrap">
+                                    {formatDate(p.paidAt)}
+                                </td>
+                                <td className="p-4 align-middle text-muted-foreground whitespace-nowrap">
+                                    {p.recordedBy.name}
+                                </td>
+                                <td className="p-4 align-middle">
+                                    <ReceiptButton paymentId={p.id} />
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {payments.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="p-12 text-center text-muted-foreground italic">No payments found.</td>
-                                </tr>
-                            ) : (
-                                payments.map((p) => (
-                                    <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                                        <td className="p-4">
-                                            <p className="font-bold text-foreground m-0">{p.member.name}</p>
-                                            <p className="text-xs text-muted-foreground m-0 mt-0.5">{p.member.phone}</p>
-                                        </td>
-                                        <td className="p-4 font-black text-indigo-600 dark:text-indigo-400">
-                                            {formatCurrency(p.amount)}
-                                        </td>
-                                        <td className="p-4">
-                                            <span className="text-[10px] uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 font-black tracking-widest">
-                                                {p.mode}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-muted-foreground font-medium whitespace-nowrap">
+                        ))}
+                        {payments.length === 0 && (
+                            <tr>
+                                <td colSpan={7} className="p-12 text-center text-muted-foreground text-sm">
+                                    No payments recorded yet
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Mobile Card View (sm and md) */}
+            <div className="lg:hidden flex flex-col gap-4">
+                {payments.map((p) => (
+                    <div 
+                        key={p.id}
+                        className="bg-card border border-border rounded-xl p-4 relative hover:border-primary/50 transition-all shadow-sm active:scale-[0.98]"
+                    >
+                        <div className="flex justify-between items-start mb-3">
+                            <Link 
+                                href={`/dashboard/members/${p.member.id}`}
+                                className="flex-1 pr-12"
+                            >
+                                <div className="font-bold text-[15px] text-foreground hover:text-primary transition-colors truncate">
+                                    {p.member.name}
+                                </div>
+                                <div className="text-[12px] text-muted-foreground mt-0.5">
+                                    {p.member.phone}
+                                </div>
+                            </Link>
+                            <div className="absolute top-4 right-4 z-10">
+                                <ReceiptButton paymentId={p.id} />
+                            </div>
+                        </div>
+
+                        <Link 
+                            href={`/dashboard/members/${p.member.id}`}
+                            className="block"
+                        >
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <div className="text-[18px] font-black text-foreground">
+                                        {formatCurrency(p.amount)}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span style={{
+                                            ...MODE_STYLE[p.mode],
+                                            fontSize: 10, padding: '2px 7px',
+                                            borderRadius: 4, fontWeight: 600,
+                                            letterSpacing: '0.02em'
+                                        }}>
+                                            {p.mode}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground font-medium">
                                             {formatDate(p.paidAt)}
-                                        </td>
-                                        <td className="p-4 text-muted-foreground text-xs font-medium">
-                                            {p.recordedBy.name}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                                        Recorded by
+                                    </div>
+                                    <div className="text-[12px] font-semibold text-foreground">
+                                        {p.recordedBy.name}
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                    </div>
+                ))}
+                
+                {payments.length === 0 && (
+                    <div className="bg-card border border-border border-dashed rounded-xl p-12 text-center text-muted-foreground text-sm">
+                        No payments recorded yet
+                    </div>
+                )}
             </div>
         </div>
     )

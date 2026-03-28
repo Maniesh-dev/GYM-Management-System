@@ -154,7 +154,7 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger className={`${buttonVariants()} w-full h-10 font-bold active:scale-[0.98] transition-all`}>
+            <DialogTrigger className={`${buttonVariants()} h-10 font-bold active:scale-[0.98] transition-all`}>
                 + Record payment
             </DialogTrigger>
             <DialogContent style={{ maxWidth: 520 }}>
@@ -214,7 +214,7 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
                             <SelectTrigger className='w-full'><SelectValue placeholder="Select plan" /></SelectTrigger>
                             <SelectContent>
                                 {plans.map(p => (
-                                    <SelectItem key={p.id} value={p.id}>
+                                    <SelectItem key={p.id} value={`${p.name} — ₹${p.price}`}>
                                         {p.name} — ₹{p.price}
                                     </SelectItem>
                                 ))}

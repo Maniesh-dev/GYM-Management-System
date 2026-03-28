@@ -5,7 +5,6 @@ import { formatDate, formatCurrency, daysUntil } from '@/lib/utils'
 import { MemberQRCard } from '@/components/members/MemberQRCard'
 import { MemberStatusActions } from '@/components/members/MemberStatusActions'
 import { PaymentFormDialog } from '@/components/billing/PaymentForm'
-import { Unauthorized } from '@/components/Unauthorized'
 
 export default async function MemberProfilePage({
     params,
@@ -15,15 +14,8 @@ export default async function MemberProfilePage({
     const session = await auth()
     const { id } = await params
 
-    if (session!.user.role === 'TRAINER') {
-        return <Unauthorized />
-    }
-
     const member = await prisma.member.findUnique({
-        where: {
-            id,
-            gymId: session!.user.gymId,
-        },
+        where: { id, gymId: session!.user.gymId },
         include: {
             plan: true,
             trainer: { select: { name: true } },
@@ -175,4 +167,3 @@ export default async function MemberProfilePage({
         </div>
     )
 }
-
