@@ -20,8 +20,8 @@ export default async function MemberProfilePage({
     }
 
     const member = await prisma.member.findUnique({
-        where: { 
-            id, 
+        where: {
+            id,
             gymId: session!.user.gymId,
         },
         include: {
@@ -175,4 +175,4 @@ export default async function MemberProfilePage({
         </div>
     )
 }
-走走
+

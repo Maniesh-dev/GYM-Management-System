@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 export default async function NewMemberPage() {
   const session = await auth()
-  
+
   if (session!.user.role === 'TRAINER') {
     return <Unauthorized />
   }
@@ -55,4 +55,3 @@ export default async function NewMemberPage() {
     </div>
   )
 }
-走走

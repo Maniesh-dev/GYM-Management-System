@@ -6,7 +6,7 @@ import { Unauthorized } from '@/components/Unauthorized'
 
 export default async function BillingPage() {
     const session = await auth()
-    
+
     if (session!.user.role === 'TRAINER') {
         return <Unauthorized />
     }
@@ -114,4 +114,3 @@ export default async function BillingPage() {
         </div>
     )
 }
-走走

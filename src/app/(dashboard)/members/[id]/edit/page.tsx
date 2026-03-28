@@ -1,9 +1,9 @@
-import { auth }     from '@/lib/auth'
-import { prisma }   from '@/lib/db'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import { EditMemberForm } from '@/components/members/EditMemberForm'
-import { Unauthorized }   from '@/components/Unauthorized'
-import Link               from 'next/link'
+import { Unauthorized } from '@/components/Unauthorized'
+import Link from 'next/link'
 
 export default async function EditMemberPage({
   params,
@@ -11,25 +11,25 @@ export default async function EditMemberPage({
   params: Promise<{ id: string }>
 }) {
   const session = await auth()
-  
+
   if (session!.user.role === 'TRAINER') {
     return <Unauthorized />
   }
 
-  const gymId   = session!.user.gymId
-  const { id }  = await params
+  const gymId = session!.user.gymId
+  const { id } = await params
 
   const [member, plans, trainers] = await Promise.all([
     prisma.member.findUnique({
       where: { id, gymId },
     }),
     prisma.plan.findMany({
-      where:   { gymId, isActive: true },
+      where: { gymId, isActive: true },
       orderBy: { price: 'asc' },
     }),
     prisma.user.findMany({
-      where:   { gymId, role: 'TRAINER' },
-      select:  { id: true, name: true },
+      where: { gymId, role: 'TRAINER' },
+      select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
   ])
@@ -67,4 +67,4 @@ export default async function EditMemberPage({
     </div>
   )
 }
-走走
+

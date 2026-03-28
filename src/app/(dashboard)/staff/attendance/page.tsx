@@ -10,7 +10,7 @@ export default async function AttendancePage({
     searchParams: Promise<{ date?: string; userId?: string }>
 }) {
     const session = await auth()
-    
+
     if (session!.user.role === 'TRAINER') {
         return <Unauthorized />
     }
@@ -200,4 +200,4 @@ export default async function AttendancePage({
         </div>
     )
 }
-走走
+

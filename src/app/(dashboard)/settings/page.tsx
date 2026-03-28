@@ -5,7 +5,7 @@ import { Unauthorized } from '@/components/Unauthorized'
 
 export default async function SettingsPage() {
   const session = await auth()
-  
+
   if (session!.user.role === 'TRAINER') {
     return <Unauthorized />
   }
@@ -40,7 +40,7 @@ export default async function SettingsPage() {
           <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5 opacity-60">Subscription</label>
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 tracking-wider">
-              {gym.plan}
+              PRO PLAN
             </span>
           </div>
         </div>
@@ -54,4 +54,3 @@ export default async function SettingsPage() {
     </div>
   )
 }
-走走

@@ -6,7 +6,7 @@ import { Unauthorized } from '@/components/Unauthorized'
 
 export default async function StaffPage() {
     const session = await auth()
-    
+
     if (session!.user.role === 'TRAINER') {
         return <Unauthorized />
     }
@@ -73,4 +73,4 @@ export default async function StaffPage() {
         </div>
     )
 }
-走走
+

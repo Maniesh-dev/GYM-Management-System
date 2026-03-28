@@ -389,4 +389,4 @@ export default function ManualCheckinPage() {
         </div>
     )
 }
-走走
+
