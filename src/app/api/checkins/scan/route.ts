@@ -99,20 +99,21 @@ export async function POST(req: NextRequest) {
                 })
             }
 
-            // Prevent duplicate check-in within 1 hour
-            const recentCheckin = await prisma.checkin.findFirst({
+            // Prevent duplicate check-in within the same day (IST)
+            const todayStart = getISTStartOfDay()
+            const existingCheckin = await prisma.checkin.findFirst({
                 where: {
                     memberId: member.id,
-                    checkedAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
+                    checkedAt: { gte: todayStart },
                 },
             })
 
-            if (recentCheckin) {
+            if (existingCheckin) {
                 return NextResponse.json({
                     status: 'ALREADY_IN',
                     scanType: 'MEMBER',
                     name: member.name,
-                    message: 'Already checked in within the last hour',
+                    message: `Already checked in today at ${new Date(existingCheckin.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}. Entry restricted to once per day.`,
                 })
             }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withRole } from '@/lib/withRole'
 import { prisma } from '@/lib/db'
+import { getISTStartOfDay } from '@/lib/utils'
 
 // GET — search member by phone number
 export const GET = withRole('checkins:write', async (req, { session }) => {
@@ -35,10 +36,10 @@ export const GET = withRole('checkins:write', async (req, { session }) => {
         )
     }
 
-    // Check if already checked in within last 1 hour
-    const alreadyIn = member.checkins[0]
-        ? new Date(member.checkins[0].checkedAt).getTime() >
-        Date.now() - 60 * 60 * 1000
+    // Check if already checked in today (IST)
+    const todayStart = getISTStartOfDay()
+    const todayCheckin = member.checkins[0]
+        ? new Date(member.checkins[0].checkedAt).getTime() >= todayStart.getTime()
         : false
 
     const daysLeft = Math.ceil(
@@ -56,7 +57,7 @@ export const GET = withRole('checkins:write', async (req, { session }) => {
         expiryDate: member.expiryDate,
         daysLeft: Math.max(0, daysLeft),
         trainerName: member.trainer?.name ?? null,
-        alreadyIn,
+        alreadyIn: todayCheckin,
         lastCheckin: member.checkins[0]?.checkedAt ?? null,
     })
 })

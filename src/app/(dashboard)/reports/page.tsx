@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getISTDate } from '@/lib/utils'
 import { RevenueChartWithFilter } from '@/components/reports/RevenueChartWithFilter'
 import { PlanPieChart } from '@/components/reports/PlanPieChart'
 
@@ -8,8 +8,9 @@ export default async function ReportsPage() {
     const session = await auth()
     const gymId = session!.user.gymId
 
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    // Use IST-corrected dates for accurate "this month" calculations
+    const now = getISTDate()
+    const istMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     // Fetch up to 5 years ago for 'All Time' filter
     const maxHistoryDate = new Date(now.getFullYear() - 5, now.getMonth(), 1)
 
@@ -25,7 +26,7 @@ export default async function ReportsPage() {
         prisma.member.count({ where: { gymId, status: 'EXPIRED' } }),
         prisma.member.count({ where: { gymId, status: 'FROZEN' } }),
         prisma.payment.aggregate({
-            where: { member: { gymId }, paidAt: { gte: monthStart } },
+            where: { member: { gymId }, paidAt: { gte: istMonthStart } },
             _sum: { amount: true },
         }),
         prisma.payment.aggregate({
@@ -33,10 +34,10 @@ export default async function ReportsPage() {
             _sum: { amount: true },
         }),
         prisma.member.count({
-            where: { gymId, joinDate: { gte: monthStart } },
+            where: { gymId, joinDate: { gte: istMonthStart } },
         }),
         prisma.member.count({
-            where: { gymId, status: 'CANCELLED', updatedAt: { gte: monthStart } },
+            where: { gymId, status: 'CANCELLED', updatedAt: { gte: istMonthStart } },
         }),
         prisma.payment.groupBy({
             by: ['mode'],
