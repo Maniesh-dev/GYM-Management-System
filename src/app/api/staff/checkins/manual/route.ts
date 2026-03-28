@@ -26,7 +26,6 @@ export const GET = withRole('checkins:write', async (req, { session }) => {
         },
         include: {
             trainerCheckins: {
-                where: { checkedAt: { gte: todayStart } },
                 orderBy: { checkedAt: 'desc' },
                 take: 1,
             },
@@ -36,7 +35,7 @@ export const GET = withRole('checkins:write', async (req, { session }) => {
 
     return NextResponse.json(staff.map(s => {
         const last = s.trainerCheckins[0]
-        const alreadyIn = last?.type === 'IN'
+        const alreadyIn = !!last && last.type === 'IN' && new Date(last.checkedAt).getTime() >= todayStart.getTime()
 
         return {
             id: s.id,

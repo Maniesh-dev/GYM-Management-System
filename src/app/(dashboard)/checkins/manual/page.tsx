@@ -181,6 +181,19 @@ export default function ManualCheckinPage() {
     const isSelfChecking = mode === 'STAFF' && foundStaff?.id === session?.user?.id && session?.user?.role === 'RECEPTION'
     const canManageStaffAttendance = session?.user?.role === 'OWNER' || session?.user?.role === 'RECEPTION'
     const disableStaffCheckIn = mode === 'STAFF' && !!foundStaff?.alreadyIn && !checkinResult && canManageStaffAttendance
+    const disableStaffCheckOut = mode === 'STAFF' && !!foundStaff && !foundStaff.alreadyIn && !checkinResult && canManageStaffAttendance
+    const staffLastActivity = foundStaff?.lastCheckin
+        ? (() => {
+            const lastDate = new Date(foundStaff.lastCheckin)
+            const todayInIST = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
+            const lastDateInIST = lastDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
+            const dayLabel = lastDateInIST === todayInIST
+                ? 'Today'
+                : lastDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
+            const timeLabel = lastDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
+            return `${dayLabel} - ${timeLabel}`
+        })()
+        : null
 
     // ── Styles ──────────────────────────────────────────────────────
     const pageClass = "min-h-screen bg-background flex items-start justify-center py-10 px-5"
@@ -345,19 +358,22 @@ export default function ManualCheckinPage() {
                                         {disableStaffCheckIn ? 'Already checked IN' : 'Check In'}
                                     </button>
                                     <button
-                                        onClick={() => setStaffType('OUT')}
-                                        className={`flex-1 py-3 rounded-xl border font-black text-sm transition-all ${staffType === 'OUT' ? 'bg-[#185FA5] text-white border-[#185FA5] shadow-sm' : 'bg-background text-foreground border-border hover:bg-muted/50'}`}
+                                        onClick={() => {
+                                            if (!disableStaffCheckOut) setStaffType('OUT')
+                                        }}
+                                        disabled={disableStaffCheckOut}
+                                        className={`flex-1 py-3 rounded-xl border font-black text-sm transition-all ${staffType === 'OUT' ? 'bg-[#185FA5] text-white border-[#185FA5] shadow-sm' : 'bg-background text-foreground border-border hover:bg-muted/50'} ${disableStaffCheckOut ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
-                                        Check Out
+                                        {disableStaffCheckOut ? 'Already checked OUT' : 'Check Out'}
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {foundStaff.lastCheckin && !checkinResult && (
+                        {staffLastActivity && !checkinResult && (
                             <div className="mb-6 p-3.5 rounded-xl bg-muted/30 border border-border text-[11px] text-muted-foreground flex justify-between items-center">
-                                <span className="font-medium uppercase tracking-wider">Yesterday & Previous</span>
-                                <span className="text-foreground">Last: {foundStaff.lastType} · {new Date(foundStaff.lastCheckin).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>
+                                <span className="font-medium uppercase tracking-wider">Last attendance</span>
+                                <span className="text-foreground">Last: {foundStaff.lastType} - {staffLastActivity}</span>
                             </div>
                         )}
 
