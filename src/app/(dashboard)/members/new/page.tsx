@@ -6,6 +6,7 @@ import Link from 'next/link'
 export default async function NewMemberPage() {
   const session = await auth()
   const gymId = session!.user.gymId
+  const canDiscount = ['OWNER', 'RECEPTION'].includes(session!.user.role)
 
   const [plans, trainers] = await Promise.all([
     prisma.plan.findMany({
@@ -43,6 +44,7 @@ export default async function NewMemberPage() {
           mode="create"
           plans={plans}
           trainers={trainers}
+          canDiscount={canDiscount}
         />
       </div>
     </div>

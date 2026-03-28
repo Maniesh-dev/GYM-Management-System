@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -49,7 +49,7 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
     const wrapperRef = useRef<HTMLDivElement>(null)
 
     const [discountValue, setDiscountValue] = useState('')
-    const [discountType, setDiscountType] = useState('FIXED')
+    const [discountType, setDiscountType] = useState<'FIXED' | 'PERCENTAGE'>('FIXED')
 
     const filteredMembers = members.filter(m =>
         m.phone.includes(searchQuery) || m.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -79,46 +79,59 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
     const planIdWatch = form.watch('planId')
     const showRef = ['UPI', 'CARD', 'CHEQUE'].includes(mode)
 
-    useEffect(() => {
-        if (!planIdWatch) return
-        const plan = plans.find(p => p.id === planIdWatch)
-        if (!plan) return
-
-        let newAmount = plan.price
+    const calculateFinalAmount = useCallback((planPrice: number) => {
         const dVal = Number(discountValue)
-        if (!isNaN(dVal) && dVal > 0) {
-            if (discountType === 'FIXED') {
-                newAmount = Math.max(0, plan.price - dVal)
-            } else {
-                newAmount = Math.max(0, plan.price - (plan.price * dVal / 100))
-            }
+        if (isNaN(dVal) || dVal <= 0) return planPrice
+
+        if (discountType === 'FIXED') {
+            return Math.max(0, planPrice - dVal)
         }
-        form.setValue('amount', newAmount)
-    }, [planIdWatch, discountValue, discountType, plans, form])
+        return Math.max(0, planPrice - (planPrice * dVal / 100))
+    }, [discountValue, discountType])
+
+    useEffect(() => {
+        if (!planIdWatch) {
+            form.setValue('amount', 0, { shouldValidate: true })
+            return
+        }
+
+        const plan = plans.find(p => p.id === planIdWatch)
+        if (!plan) {
+            form.setValue('amount', 0, { shouldValidate: true })
+            return
+        }
+
+        form.setValue('amount', calculateFinalAmount(plan.price), { shouldValidate: true })
+    }, [planIdWatch, plans, form, calculateFinalAmount])
 
     function handleMemberChange(memberId: string | null) {
         if (!memberId) return
         form.setValue('memberId', memberId)
-        const member = members.find(m => m.id === memberId)
-        if (member) {
-            const plan = plans.find(p => p.id === member.planId)
-            if (plan) {
-                form.setValue('planId', plan.id)
-                form.setValue('amount', plan.price)
-            }
-        }
+        // Amount must come from the selected plan in this form,
+        // not from member's current/previous plan.
+        form.setValue('planId', '')
+        form.setValue('amount', 0, { shouldValidate: true })
     }
 
     function handlePlanChange(planId: string | null) {
         if (!planId) return
         form.setValue('planId', planId)
         const plan = plans.find(p => p.id === planId)
-        if (plan) form.setValue('amount', plan.price)
+        if (plan) form.setValue('amount', calculateFinalAmount(plan.price), { shouldValidate: true })
     }
 
     async function onSubmit(values: PaymentInput) {
         setSaving(true)
         setError('')
+
+        const selectedPlan = plans.find(p => p.id === values.planId)
+        if (!selectedPlan) {
+            setError('Please select a valid plan')
+            setSaving(false)
+            return
+        }
+
+        const finalAmount = calculateFinalAmount(selectedPlan.price)
 
         let finalNote = values.note || ''
         const dVal = Number(discountValue)
@@ -133,17 +146,19 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...values,
-                amount: Number(values.amount),
+                amount: finalAmount,
                 note: finalNote,
             }),
         })
         if (!res.ok) {
-            const _ = await res.json()
+            await res.json()
             setError('Failed to record payment')
             setSaving(false)
         } else {
             setOpen(false)
             form.reset()
+            setDiscountValue('')
+            setDiscountType('FIXED')
             router.refresh()
         }
     }
@@ -175,6 +190,8 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
                                 onChange={(e) => {
                                     setSearchQuery(e.target.value)
                                     form.setValue('memberId', '') // clear form value
+                                    form.setValue('planId', '')
+                                    form.setValue('amount', 0)
                                     setShowSuggestions(true)
                                 }}
                                 className='cursor-pointer w-full'
@@ -210,11 +227,19 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
                     {/* Plan */}
                     <div style={field}>
                         <Label>Plan *</Label>
-                        <Select onValueChange={handlePlanChange}>
-                            <SelectTrigger className='w-full'><SelectValue placeholder="Select plan" /></SelectTrigger>
+                        <Select value={planIdWatch || undefined} onValueChange={handlePlanChange}>
+                            <SelectTrigger className='w-full'>
+                                <SelectValue placeholder="Select plan">
+                                    {(value) => {
+                                        if (!value) return 'Select plan'
+                                        const selectedPlan = plans.find((p) => p.id === value)
+                                        return selectedPlan ? `${selectedPlan.name} - Rs.${selectedPlan.price}` : 'Select plan'
+                                    }}
+                                </SelectValue>
+                            </SelectTrigger>
                             <SelectContent>
                                 {plans.map(p => (
-                                    <SelectItem key={p.id} value={`${p.name} — ₹${p.price}`}>
+                                    <SelectItem key={p.id} value={p.id}>
                                         {p.name} — ₹{p.price}
                                     </SelectItem>
                                 ))}
@@ -248,7 +273,7 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
                         </div>
                         <div style={field}>
                             <Label>Final Amount (₹) *</Label>
-                            <Input type="number" {...form.register('amount')} placeholder="0" />
+                            <Input type="number" {...form.register('amount', { valueAsNumber: true })} placeholder="0" readOnly />
                             {form.formState.errors.amount && (
                                 <p style={err}>{form.formState.errors.amount.message}</p>
                             )}

@@ -15,6 +15,7 @@ interface MemberFormProps {
   // Pass existing member data to pre-fill for edit mode
   defaultValues?: Partial<MemberInput & { id: string }>
   mode: 'create' | 'edit'
+  canDiscount?: boolean
 }
 
 export function MemberForm({
@@ -22,6 +23,7 @@ export function MemberForm({
   trainers,
   defaultValues,
   mode,
+  canDiscount = false,
 }: MemberFormProps) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
@@ -31,6 +33,8 @@ export function MemberForm({
   const [recordPayment, setRecordPayment] = useState(false)
   const [paymentMode, setPaymentMode] = useState('CASH')
   const [paymentRef, setPaymentRef] = useState('')
+  const [discountValue, setDiscountValue] = useState('')
+  const [discountType, setDiscountType] = useState<'FIXED' | 'PERCENTAGE'>('FIXED')
 
   const {
     register,
@@ -46,6 +50,15 @@ export function MemberForm({
   })
 
   const selectedPlanId = watch('planId')
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId)
+  const baseAmount = selectedPlan?.price ?? 0
+  const discountNumeric = Number(discountValue)
+  const discountAmount = canDiscount && discountNumeric > 0
+    ? (discountType === 'PERCENTAGE'
+      ? (baseAmount * discountNumeric) / 100
+      : discountNumeric)
+    : 0
+  const finalPaymentAmount = Math.max(0, baseAmount - discountAmount)
 
   async function onSubmit(values: MemberInput) {
     setSaving(true)
@@ -68,15 +81,29 @@ export function MemberForm({
 
         if (mode === 'create' && recordPayment) {
           const plan = plans.find(p => p.id === values.planId)
+          const amount = canDiscount
+            ? Math.max(
+              0,
+              (plan?.price ?? 0) - (discountType === 'PERCENTAGE'
+                ? ((plan?.price ?? 0) * (Number(discountValue) || 0)) / 100
+                : (Number(discountValue) || 0))
+            )
+            : (plan?.price || 0)
+
+          const discountNote = canDiscount && Number(discountValue) > 0
+            ? `Initial payment discount: ${discountType === 'PERCENTAGE' ? `${discountValue}%` : `₹${discountValue}`}`
+            : ''
+
           await fetch('/api/payments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               memberId: data.id,
               planId: values.planId,
-              amount: plan?.price || 0,
+              amount,
               mode: paymentMode,
               referenceNo: paymentRef,
+              note: discountNote,
               paidAt: values.joinDate,
               sendReceipt: true,
             })
@@ -100,7 +127,7 @@ export function MemberForm({
         router.push(`/dashboard/members/${defaultValues?.id}`)
         router.refresh()
       }
-    } catch (err) {
+    } catch {
       setError('Please check all required fields and try again.')
     } finally {
       setSaving(false)
@@ -271,6 +298,35 @@ export function MemberForm({
                   />
                 </div>
               </div>
+
+              {canDiscount && (
+                <div className={g2Class}>
+                  <div className={fldClass}>
+                    <label className={lblClass}>Discount</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        value={discountValue}
+                        onChange={e => setDiscountValue(e.target.value)}
+                        placeholder="0"
+                        className={inpClass}
+                      />
+                      <select
+                        value={discountType}
+                        onChange={e => setDiscountType(e.target.value as 'FIXED' | 'PERCENTAGE')}
+                        className={`${selClass} max-w-[110px]`}
+                      >
+                        <option value="FIXED">₹</option>
+                        <option value="PERCENTAGE">%</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2 m-0">
+                      Final amount: ₹{Math.round(finalPaymentAmount).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

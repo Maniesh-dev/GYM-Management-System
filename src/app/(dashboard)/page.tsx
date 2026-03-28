@@ -10,6 +10,7 @@ import { Clock } from '@/components/dashboard/Clock'
 export default async function DashboardPage() {
   const session = await auth()
   const gymId = session!.user.gymId
+  const isTrainer = session!.user.role === 'TRAINER'
 
   // Use IST-corrected current date for display/greeting
   const now = getISTDate()
@@ -90,12 +91,14 @@ export default async function DashboardPage() {
           sub={`${totalMembers} total`}
           color="#1D9E75"
         />
-        <KPICard
-          label="Revenue this month"
-          value={formatCurrency(monthRevenue._sum.amount ?? 0)}
-          sub={now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-          color="#534AB7"
-        />
+        {!isTrainer && (
+          <KPICard
+            label="Revenue this month"
+            value={formatCurrency(monthRevenue._sum.amount ?? 0)}
+            sub={now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            color="#534AB7"
+          />
+        )}
         <KPICard
           label="Today's check-ins"
           value={todayCheckins.length}
@@ -130,12 +133,14 @@ export default async function DashboardPage() {
         </div>
 
         {/* Quick actions */}
-        <div className={cardClass}>
-          <h2 className="text-[15px] font-bold text-foreground m-0 mb-4">
-            Quick actions
-          </h2>
-          <QuickActions />
-        </div>
+        {!isTrainer && (
+          <div className={cardClass}>
+            <h2 className="text-[15px] font-bold text-foreground m-0 mb-4">
+              Quick actions
+            </h2>
+            <QuickActions />
+          </div>
+        )}
 
       </div>
 
