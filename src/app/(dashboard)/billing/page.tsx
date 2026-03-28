@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { PaymentFormDialog } from '@/components/billing/PaymentForm'
 import { ReceiptButton } from '@/components/billing/ReceiptButton'
+import Link from 'next/link'
 
 const MODE_STYLE: Record<string, React.CSSProperties> = {
     CASH: { background: '#E1F5EE', color: '#085041' },
@@ -28,7 +29,7 @@ export default async function BillingPage({
                 ...(memberId ? { memberId } : {}),
             },
             include: {
-                member: { select: { name: true, phone: true } },
+                member: { select: { id: true, name: true, phone: true } },
                 recordedBy: { select: { name: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -64,8 +65,8 @@ export default async function BillingPage({
                 )}
             </div>
 
-            {/* Payment table wrapper with horizontal scroll */}
-            <div className="bg-card border border-border rounded-xl overflow-x-auto">
+            {/* Desktop Table View (lg and above) */}
+            <div className="hidden lg:block bg-card border border-border rounded-xl overflow-x-auto">
                 <table className="w-full border-collapse text-[13px] min-w-[800px]">
                     <thead>
                         <tr className="bg-muted border-b border-border">
@@ -78,9 +79,14 @@ export default async function BillingPage({
                     </thead>
                     <tbody>
                         {payments.map((p) => (
-                            <tr key={p.id} className="border-b border-border last:border-0">
+                            <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                 <td className="p-4 align-middle">
-                                    <div className="font-semibold text-foreground">{p.member.name}</div>
+                                    <Link 
+                                        href={`/dashboard/members/${p.member.id}`}
+                                        className="font-semibold text-foreground hover:text-primary transition-colors inline-block"
+                                    >
+                                        {p.member.name}
+                                    </Link>
                                     <div className="text-[11px] text-muted-foreground">{p.member.phone}</div>
                                 </td>
                                 <td className="p-4 align-middle font-bold text-foreground">
@@ -118,6 +124,73 @@ export default async function BillingPage({
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View (sm and md) */}
+            <div className="lg:hidden flex flex-col gap-4">
+                {payments.map((p) => (
+                    <div 
+                        key={p.id}
+                        className="bg-card border border-border rounded-xl p-4 relative hover:border-primary/50 transition-all shadow-sm active:scale-[0.98]"
+                    >
+                        <div className="flex justify-between items-start mb-3">
+                            <Link 
+                                href={`/dashboard/members/${p.member.id}`}
+                                className="flex-1 pr-12"
+                            >
+                                <div className="font-bold text-[15px] text-foreground hover:text-primary transition-colors truncate">
+                                    {p.member.name}
+                                </div>
+                                <div className="text-[12px] text-muted-foreground mt-0.5">
+                                    {p.member.phone}
+                                </div>
+                            </Link>
+                            <div className="absolute top-4 right-4 z-10">
+                                <ReceiptButton paymentId={p.id} />
+                            </div>
+                        </div>
+
+                        <Link 
+                            href={`/dashboard/members/${p.member.id}`}
+                            className="block"
+                        >
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <div className="text-[18px] font-black text-foreground">
+                                        {formatCurrency(p.amount)}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span style={{
+                                            ...MODE_STYLE[p.mode],
+                                            fontSize: 10, padding: '2px 7px',
+                                            borderRadius: 4, fontWeight: 600,
+                                            letterSpacing: '0.02em'
+                                        }}>
+                                            {p.mode}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground font-medium">
+                                            {formatDate(p.paidAt)}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                                        Recorded by
+                                    </div>
+                                    <div className="text-[12px] font-semibold text-foreground">
+                                        {p.recordedBy.name}
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                    </div>
+                ))}
+                
+                {payments.length === 0 && (
+                    <div className="bg-card border border-border border-dashed rounded-xl p-12 text-center text-muted-foreground text-sm">
+                        No payments recorded yet
+                    </div>
+                )}
             </div>
         </div>
     )

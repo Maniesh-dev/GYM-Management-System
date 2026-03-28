@@ -65,7 +65,7 @@ export function MemberForm({
       }).then(async (response) => {
         if (!response.ok) throw new Error('API Error')
         const data = await response.json()
-        
+
         if (mode === 'create' && recordPayment) {
           const plan = plans.find(p => p.id === values.planId)
           await fetch('/api/payments', {
@@ -82,7 +82,7 @@ export function MemberForm({
             })
           })
         }
-        
+
         return data
       })
 
@@ -113,7 +113,7 @@ export function MemberForm({
   const selClass = `${inpClass} cursor-pointer`
   const errClass = "text-xs text-red-600 dark:text-red-400 mt-1 m-0"
   const fldClass = "flex flex-col"
-  const g2Class = "grid grid-cols-2 gap-4"
+  const g2Class = "flex flex-col md:grid md:grid-cols-2 gap-4"
 
   return (
     <form
@@ -127,7 +127,7 @@ export function MemberForm({
           <label className={lblClass}>Full name *</label>
           <input
             {...register('name')}
-            placeholder="Rahul Sharma"
+            placeholder="Enter full name"
             className={inpClass}
           />
           {errors.name && <p className={errClass}>{errors.name.message}</p>}
@@ -136,7 +136,7 @@ export function MemberForm({
           <label className={lblClass}>Phone number *</label>
           <input
             {...register('phone')}
-            placeholder="9876543210"
+            placeholder="Enter whatsapp number"
             maxLength={10}
             className={inpClass}
           />
@@ -151,7 +151,7 @@ export function MemberForm({
           <input
             {...register('email')}
             type="email"
-            placeholder="rahul@gmail.com"
+            placeholder="Enter email address"
             className={inpClass}
           />
         </div>
@@ -236,8 +236,8 @@ export function MemberForm({
               <h3 className="m-0 text-[15px] font-semibold text-foreground">Initial Payment</h3>
               <p className="m-0 mt-1 text-[13px] text-muted-foreground">Record the first payment for this member.</p>
             </div>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setRecordPayment(!recordPayment)}
               className="px-3.5 py-1.5 text-[13px] rounded-lg border border-border bg-background text-foreground cursor-pointer font-medium hover:bg-muted transition-colors"
             >
@@ -250,9 +250,9 @@ export function MemberForm({
               <div className={g2Class}>
                 <div className={fldClass}>
                   <label className={lblClass}>Payment mode *</label>
-                  <select 
-                    value={paymentMode} 
-                    onChange={e => setPaymentMode(e.target.value)} 
+                  <select
+                    value={paymentMode}
+                    onChange={e => setPaymentMode(e.target.value)}
                     className={selClass}
                   >
                     <option value="CASH">Cash</option>
@@ -263,11 +263,11 @@ export function MemberForm({
                 </div>
                 <div className={fldClass}>
                   <label className={lblClass}>Reference No (optional)</label>
-                  <input 
-                    value={paymentRef} 
-                    onChange={e => setPaymentRef(e.target.value)} 
-                    placeholder={paymentMode === 'UPI' ? 'e.g. 402112345678' : paymentMode === 'CARD' ? 'e.g. 4242' : 'e.g. 001234'} 
-                    className={inpClass} 
+                  <input
+                    value={paymentRef}
+                    onChange={e => setPaymentRef(e.target.value)}
+                    placeholder={paymentMode === 'UPI' ? 'e.g. 402112345678' : paymentMode === 'CARD' ? 'e.g. 4242' : 'e.g. 001234'}
+                    className={inpClass}
                   />
                 </div>
               </div>

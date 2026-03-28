@@ -31,55 +31,55 @@ export default async function MemberProfilePage({
     if (!member) notFound()
 
     const STATUS_COLOR: Record<string, string> = {
-        ACTIVE: '#1D9E75', EXPIRED: '#E24B4A', FROZEN: '#378ADD', CANCELLED: '#888780',
+        ACTIVE: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20',
+        EXPIRED: 'text-rose-600 bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20',
+        FROZEN: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20',
+        CANCELLED: 'text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-100 dark:border-zinc-500/20',
     }
 
-    const card: React.CSSProperties = {
-        background: 'var(--color-background-primary)',
-        border: '0.5px solid var(--color-border-tertiary)',
-        borderRadius: 12, padding: '20px 24px',
-    }
+    const cardClass = "bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm"
+    const lblClass = "text-sm text-muted-foreground"
+    const valClass = "text-sm font-semibold text-foreground"
 
     const canBill = ['OWNER', 'RECEPTION'].includes(session!.user.role)
-
     return (
-        <div style={{ padding: '28px 32px', maxWidth: 900 }}>
+        <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
 
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
                 <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-                        <h1 style={{ fontSize: 24, fontWeight: 600 }}>{member.name}</h1>
-                        <span style={{
-                            fontSize: 11, padding: '3px 10px', borderRadius: 4, fontWeight: 600,
-                            background: STATUS_COLOR[member.status] + '20',
-                            color: STATUS_COLOR[member.status],
-                        }}>
+                    <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-2xl font-black text-foreground">{member.name}</h1>
+                        <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border ${STATUS_COLOR[member.status]}`}>
                             {member.status}
                         </span>
                     </div>
-                    <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                    <p className="text-sm text-muted-foreground">
                         {member.phone} {member.email ? `· ${member.email}` : ''}
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div className="flex w-full sm:w-auto gap-2 items-center">
                     {canBill && (
-                        <PaymentFormDialog
-                            members={[{ id: member.id, name: member.name, phone: member.phone, planId: member.planId }]}
-                            plans={await prisma.plan.findMany({ where: { gymId: session!.user.gymId, isActive: true } })}
-                            preselectedMemberId={member.id}
-                        />
+                        <div className="flex-1 sm:flex-none">
+                            <PaymentFormDialog
+                                members={[{ id: member.id, name: member.name, phone: member.phone, planId: member.planId }]}
+                                plans={await prisma.plan.findMany({ where: { gymId: session!.user.gymId, isActive: true } })}
+                                preselectedMemberId={member.id}
+                            />
+                        </div>
                     )}
-                    <MemberStatusActions memberId={member.id} currentStatus={member.status} />
+                    <div className="flex-[2] sm:flex-none">
+                        <MemberStatusActions memberId={member.id} currentStatus={member.status} />
+                    </div>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* Membership info */}
-                <div style={card}>
-                    <h3 style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>Membership</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+                <div className={cardClass}>
+                    <h3 className="text-sm font-bold text-foreground mb-4 opacity-80 uppercase tracking-tight">Membership</h3>
+                    <div className="flex flex-col gap-3.5">
                         {[
                             ['Plan', member.plan.name],
                             ['Joined', formatDate(member.joinDate)],
@@ -87,40 +87,47 @@ export default async function MemberProfilePage({
                             ['Days left', member.status === 'ACTIVE' ? `${daysUntil(member.expiryDate)} days` : '—'],
                             ['Trainer', member.trainer?.name ?? 'Not assigned'],
                         ].map(([label, value]) => (
-                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
-                                <span style={{ fontWeight: 500 }}>{value}</span>
+                            <div key={label} className="flex justify-between items-center border-b border-border/40 last:border-0 pb-3 last:pb-0">
+                                <span className={lblClass}>{label}</span>
+                                <span className={valClass}>{value}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* QR code */}
-                <div style={card}>
-                    <h3 style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>Entry QR code</h3>
-                    <MemberQRCard memberId={member.id} memberName={member.name} qrToken={member.qrToken} />
+                <div className={cardClass}>
+                    <h3 className="text-sm font-bold text-foreground mb-4 opacity-80 uppercase tracking-tight">Entry QR code</h3>
+                    <div className="flex justify-center md:block">
+                        <MemberQRCard memberId={member.id} memberName={member.name} qrToken={member.qrToken} />
+                    </div>
                 </div>
 
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-
                 {/* Recent payments */}
-                <div style={card}>
-                    <h3 style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>Payment history</h3>
+                <div className={cardClass}>
+                    <h3 className="text-sm font-bold text-foreground mb-4 opacity-80 uppercase tracking-tight">Payment history</h3>
                     {member.payments.length === 0 ? (
-                        <p style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>No payments yet</p>
+                        <p className="text-sm text-muted-foreground py-4 text-center border border-dashed border-border rounded-lg">No payments yet</p>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div className="flex flex-col gap-4">
                             {member.payments.map((p) => (
-                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                                    <div>
-                                        <span style={{ fontWeight: 500 }}>{formatCurrency(p.amount)}</span>
-                                        <span style={{ color: 'var(--color-text-secondary)', marginLeft: 8 }}>{p.mode}</span>
+                                <div key={p.id} className="flex justify-between items-center group">
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-black text-foreground">
+                                            {formatCurrency(p.amount)}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                                            {p.mode}
+                                        </span>
                                     </div>
-                                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                                        {formatDate(p.paidAt)}
-                                    </span>
+                                    <div className="text-right">
+                                        <div className="text-[12px] text-foreground font-medium">
+                                            {formatDate(p.paidAt)}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground">
+                                            by {p.recordedBy.name}
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -128,21 +135,28 @@ export default async function MemberProfilePage({
                 </div>
 
                 {/* Recent check-ins */}
-                <div style={card}>
-                    <h3 style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>Recent check-ins</h3>
+                <div className={cardClass}>
+                    <h3 className="text-sm font-bold text-foreground mb-4 opacity-80 uppercase tracking-tight">Recent check-ins</h3>
                     {member.checkins.length === 0 ? (
-                        <p style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>No check-ins yet</p>
+                        <p className="text-sm text-muted-foreground py-4 text-center border border-dashed border-border rounded-lg">No check-ins yet</p>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div className="flex flex-col gap-3.5">
                             {member.checkins.map((c) => (
-                                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                                        {new Date(c.checkedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                                    </span>
-                                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                                        {new Date(c.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    <span style={{ fontSize: 11, color: '#1D9E75' }}>{c.method}</span>
+                                <div key={c.id} className="flex justify-between items-center">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        <span className="text-sm text-foreground font-medium">
+                                            {new Date(c.checkedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-sm text-muted-foreground font-medium">
+                                            {new Date(c.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-widest border border-emerald-100 dark:border-emerald-500/20">
+                                            {c.method}
+                                        </span>
+                                    </div>
                                 </div>
                             ))}
                         </div>

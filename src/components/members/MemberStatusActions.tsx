@@ -1,11 +1,12 @@
 'use client'
-import { useState }  from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 
 type MemberStatus = 'ACTIVE' | 'FROZEN' | 'CANCELLED' | 'EXPIRED'
 
 interface MemberStatusActionsProps {
-  memberId:      string
+  memberId: string
   currentStatus: MemberStatus
 }
 
@@ -13,23 +14,23 @@ export function MemberStatusActions({
   memberId,
   currentStatus,
 }: MemberStatusActionsProps) {
-  const router  = useRouter()
-  const [saving,       setSaving]       = useState(false)
-  const [showFreeze,   setShowFreeze]   = useState(false)
-  const [showCancel,   setShowCancel]   = useState(false)
-  const [freezeUntil,  setFreezeUntil]  = useState('')
+  const router = useRouter()
+  const [saving, setSaving] = useState(false)
+  const [showFreeze, setShowFreeze] = useState(false)
+  const [showCancel, setShowCancel] = useState(false)
+  const [freezeUntil, setFreezeUntil] = useState('')
 
   if (currentStatus === 'CANCELLED') return null
 
   async function updateStatus(
-    status:       'ACTIVE' | 'FROZEN' | 'CANCELLED',
+    status: 'ACTIVE' | 'FROZEN' | 'CANCELLED',
     frozenUntil?: string
   ) {
     setSaving(true)
     await fetch(`/api/members/${memberId}/status`, {
-      method:  'PATCH',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ status, frozenUntil }),
+      body: JSON.stringify({ status, frozenUntil }),
     })
     setSaving(false)
     setShowFreeze(false)
@@ -37,68 +38,28 @@ export function MemberStatusActions({
     router.refresh()
   }
 
-  const btn: React.CSSProperties = {
-    padding:      '9px 16px',
-    borderRadius: 8,
-    fontSize:     13,
-    fontWeight:   500,
-    border:       '0.5px solid #d0cdc5',
-    background:   '#fff',
-    cursor:       'pointer',
-    color:        '#444',
-  }
-
-  const overlay: React.CSSProperties = {
-    position:        'fixed',
-    inset:           0,
-    background:      'rgba(0,0,0,0.5)',
-    display:         'flex',
-    alignItems:      'center',
-    justifyContent:  'center',
-    zIndex:          1000,
-    padding:         20,
-  }
-
-  const modal: React.CSSProperties = {
-    background:     '#fff',
-    borderRadius:   16,
-    padding:        '28px 32px',
-    width:          400,
-    maxWidth:       '100%',
-    display:        'flex',
-    flexDirection:  'column',
-    gap:            16,
-  }
-
-  const inp: React.CSSProperties = {
-    width:        '100%',
-    padding:      '9px 13px',
-    borderRadius: 8,
-    border:       '0.5px solid #d0cdc5',
-    fontSize:     14,
-    outline:      'none',
-    background:   '#fff',
-    color:        '#1a1a1a',
-    boxSizing:    'border-box' as any,
-  }
+  const overlayClass = "fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-5 backdrop-blur-sm"
+  const modalClass = "bg-card border border-border rounded-2xl p-7 w-full max-w-[420px] shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200"
+  const inputClass = "w-full px-3.5 py-2.5 rounded-lg border border-border text-sm outline-none bg-background text-foreground focus:ring-2 focus:ring-ring"
+  const btnClass = "h-10 px-4 py-2 rounded-lg text-sm font-semibold border border-border shadow-sm flex-1 flex items-center justify-center transition-all active:scale-[0.98]"
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="flex gap-2 w-full h-10">
 
         {/* Freeze / Unfreeze */}
         {currentStatus === 'FROZEN' ? (
           <button
             onClick={() => updateStatus('ACTIVE')}
             disabled={saving}
-            style={btn}
+            className={`${btnClass} bg-background text-foreground border-border hover:bg-muted`}
           >
             {saving ? '...' : 'Unfreeze'}
           </button>
         ) : (
           <button
             onClick={() => setShowFreeze(true)}
-            style={btn}
+            className={`${btnClass} bg-background text-foreground border-border hover:bg-muted`}
           >
             Freeze
           </button>
@@ -107,39 +68,29 @@ export function MemberStatusActions({
         {/* Cancel */}
         <button
           onClick={() => setShowCancel(true)}
-          style={{
-            ...btn,
-            color:       '#c0392b',
-            borderColor: '#fca5a5',
-          }}
+          className={`${btnClass} bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20`}
         >
-          Cancel membership
+          Cancel
         </button>
 
       </div>
 
       {/* Freeze modal */}
       {showFreeze && (
-        <div style={overlay} onClick={() => setShowFreeze(false)}>
-          <div style={modal} onClick={e => e.stopPropagation()}>
+        <div className={overlayClass} onClick={() => setShowFreeze(false)}>
+          <div className={modalClass} onClick={e => e.stopPropagation()}>
 
             <div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>
+              <h3 className="text-lg font-black text-foreground mb-1">
                 Freeze membership
               </h3>
-              <p style={{ fontSize: 13, color: '#666', margin: 0, lineHeight: 1.6 }}>
+              <p className="text-[13px] text-muted-foreground leading-relaxed">
                 The membership will be paused. The expiry date will extend automatically when unfrozen.
               </p>
             </div>
 
             <div>
-              <label style={{
-                fontSize:     13,
-                fontWeight:   500,
-                color:        '#444',
-                display:      'block',
-                marginBottom: 6,
-              }}>
+              <label className="text-[13px] font-bold text-foreground mb-1.5 block">
                 Freeze until (optional)
               </label>
               <input
@@ -147,37 +98,28 @@ export function MemberStatusActions({
                 value={freezeUntil}
                 onChange={e => setFreezeUntil(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                style={inp}
+                className={inputClass}
               />
-              <p style={{ fontSize: 11, color: '#aaa', marginTop: 5 }}>
+              <p className="text-[11px] text-muted-foreground mt-2 opacity-80">
                 Leave blank to freeze indefinitely until manually unfrozen.
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
+            <div className="flex gap-3 pt-2">
+              <Button
                 onClick={() => updateStatus('FROZEN', freezeUntil || undefined)}
                 disabled={saving}
-                style={{
-                  flex:         1,
-                  padding:      '10px 0',
-                  borderRadius: 8,
-                  border:       'none',
-                  background:   saving ? '#ccc' : '#1a1a1a',
-                  color:        '#fff',
-                  fontSize:     14,
-                  fontWeight:   600,
-                  cursor:       saving ? 'not-allowed' : 'pointer',
-                }}
+                className="flex-1 font-bold h-11"
               >
                 {saving ? 'Saving...' : 'Freeze membership'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => setShowFreeze(false)}
-                style={btn}
+                className="h-11 font-semibold"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
 
           </div>
@@ -186,53 +128,38 @@ export function MemberStatusActions({
 
       {/* Cancel modal */}
       {showCancel && (
-        <div style={overlay} onClick={() => setShowCancel(false)}>
-          <div style={modal} onClick={e => e.stopPropagation()}>
+        <div className={overlayClass} onClick={() => setShowCancel(false)}>
+          <div className={modalClass} onClick={e => e.stopPropagation()}>
 
             <div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>
+              <h3 className="text-lg font-black text-rose-600 mb-1">
                 Cancel membership?
               </h3>
-              <p style={{ fontSize: 13, color: '#666', margin: 0, lineHeight: 1.6 }}>
+              <p className="text-[13px] text-muted-foreground leading-relaxed">
                 This member will be marked as cancelled and lose gym access. You can reactivate them by recording a new payment.
               </p>
             </div>
 
-            <div style={{
-              padding:      '12px 16px',
-              borderRadius: 10,
-              background:   '#fef2f2',
-              border:       '0.5px solid #fca5a5',
-              fontSize:     13,
-              color:        '#991b1b',
-            }}>
+            <div className="p-4 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs font-medium leading-relaxed">
               This action is reversible — recording a new payment will reactivate the member.
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="destructive"
                 onClick={() => updateStatus('CANCELLED')}
                 disabled={saving}
-                style={{
-                  flex:         1,
-                  padding:      '10px 0',
-                  borderRadius: 8,
-                  border:       'none',
-                  background:   saving ? '#ccc' : '#E24B4A',
-                  color:        '#fff',
-                  fontSize:     14,
-                  fontWeight:   600,
-                  cursor:       saving ? 'not-allowed' : 'pointer',
-                }}
+                className="flex-1 font-bold h-11"
               >
-                {saving ? 'Cancelling...' : 'Yes, cancel membership'}
-              </button>
-              <button
+                {saving ? 'Cancelling...' : 'Yes, cancel'}
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => setShowCancel(false)}
-                style={btn}
+                className="h-11 font-semibold"
               >
                 Keep active
-              </button>
+              </Button>
             </div>
 
           </div>

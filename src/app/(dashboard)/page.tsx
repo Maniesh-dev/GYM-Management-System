@@ -83,7 +83,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
         <KPICard
           label="Active members"
           value={activeMembers}
@@ -119,8 +119,8 @@ export default async function DashboardPage() {
             <h2 className="text-[15px] font-bold text-foreground m-0 flex items-center">
               Expiring this week
               <span className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${expiringSoon.length > 0
-                  ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'
-                  : 'bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400'
+                ? 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'
+                : 'bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400'
                 }`}>
                 {expiringSoon.length}
               </span>

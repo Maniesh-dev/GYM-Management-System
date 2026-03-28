@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { paymentSchema, PaymentInput } from '@/lib/validations/payment.schema'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -154,8 +154,8 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger>
-                <Button>+ Record payment</Button>
+            <DialogTrigger className={`${buttonVariants()} w-full h-10 font-bold active:scale-[0.98] transition-all`}>
+                + Record payment
             </DialogTrigger>
             <DialogContent style={{ maxWidth: 520 }}>
                 <DialogHeader>
@@ -214,7 +214,7 @@ export function PaymentFormDialog({ members, plans, preselectedMemberId }: Props
                             <SelectTrigger className='w-full'><SelectValue placeholder="Select plan" /></SelectTrigger>
                             <SelectContent>
                                 {plans.map(p => (
-                                    <SelectItem key={p.id} value={p.name}>
+                                    <SelectItem key={p.id} value={p.id}>
                                         {p.name} — ₹{p.price}
                                     </SelectItem>
                                 ))}
