@@ -180,7 +180,12 @@ export function OwnerStaffAttendanceChart({ staff, logs }: OwnerStaffAttendanceC
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
+                    <Select
+                        value={filter}
+                        onValueChange={(value) => {
+                            if (value) setFilter(value as Filter)
+                        }}
+                    >
                         <SelectTrigger className="w-[145px] h-8 text-xs font-semibold border-border bg-background">
                             <SelectValue />
                         </SelectTrigger>
@@ -195,7 +200,12 @@ export function OwnerStaffAttendanceChart({ staff, logs }: OwnerStaffAttendanceC
                     </Select>
 
                     {filter === 'SELECT_MONTH' && (
-                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <Select
+                            value={selectedMonth}
+                            onValueChange={(value) => {
+                                if (value) setSelectedMonth(value)
+                            }}
+                        >
                             <SelectTrigger className="w-[140px] h-8 text-xs font-semibold border-border bg-background">
                                 <SelectValue />
                             </SelectTrigger>
@@ -229,7 +239,13 @@ export function OwnerStaffAttendanceChart({ staff, logs }: OwnerStaffAttendanceC
                             >
                                 <PolarAngleAxis type="number" domain={[0, Math.max(maxHours, 1)]} tick={false} />
                                 <RadialBar dataKey="hours" background cornerRadius={8} />
-                                <Tooltip formatter={(v: number) => [`${Number(v).toFixed(2)} hrs`, 'Hours']} />
+                                <Tooltip
+                                    formatter={(value) => {
+                                        const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value ?? 0))
+                                        const hours = Number.isFinite(parsed) ? parsed : 0
+                                        return [`${hours.toFixed(2)} hrs`, 'Hours']
+                                    }}
+                                />
                             </RadialBarChart>
                         </ResponsiveContainer>
                     </div>

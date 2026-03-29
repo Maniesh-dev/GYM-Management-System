@@ -77,7 +77,13 @@ export function TrainerReportChart({ weekly, lastMonth, last3Months, last6Months
               tickLine={false}
               tickFormatter={(v) => `${v}h`}
             />
-            <Tooltip formatter={(v: number) => [`${Number(v).toFixed(2)} hrs`, 'Worked']} />
+            <Tooltip
+              formatter={(value) => {
+                const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value ?? 0))
+                const hours = Number.isFinite(parsed) ? parsed : 0
+                return [`${hours.toFixed(2)} hrs`, 'Worked']
+              }}
+            />
             <Line type="monotone" dataKey="hours" stroke="#1D9E75" strokeWidth={2.5} dot={{ r: 3 }} />
           </LineChart>
         </ResponsiveContainer>

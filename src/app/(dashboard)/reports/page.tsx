@@ -7,6 +7,17 @@ import { MemberLifecycleTrendChart } from '@/components/reports/MemberLifecycleT
 import { OwnerStaffAttendanceChart } from '@/components/reports/OwnerStaffAttendanceChart'
 import Link from 'next/link'
 
+type AttendanceStaffRole = 'TRAINER' | 'RECEPTION'
+type AttendanceStaffUser = {
+    id: string
+    name: string
+    role: AttendanceStaffRole
+}
+
+function isAttendanceStaffRole(role: string): role is AttendanceStaffRole {
+    return role === 'TRAINER' || role === 'RECEPTION'
+}
+
 export default async function ReportsPage() {
     const session = await auth()
     const gymId = session!.user.gymId
@@ -90,8 +101,16 @@ export default async function ReportsPage() {
                 },
                 select: { id: true, name: true, role: true },
                 orderBy: { name: 'asc' },
-            })
-            : Promise.resolve([]),
+            }).then((users): AttendanceStaffUser[] =>
+                users
+                    .filter((user): user is AttendanceStaffUser => isAttendanceStaffRole(user.role))
+                    .map((user) => ({
+                        id: user.id,
+                        name: user.name,
+                        role: user.role,
+                    }))
+            )
+            : Promise.resolve<AttendanceStaffUser[]>([]),
         isOwner
             ? prisma.trainerCheckin.findMany({
                 where: {
