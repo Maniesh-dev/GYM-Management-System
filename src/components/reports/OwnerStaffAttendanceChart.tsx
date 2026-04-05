@@ -22,7 +22,7 @@ type AttendanceLog = {
     type: string
 }
 
-type Filter = 'TODAY' | 'WEEK' | 'MONTH' | 'LAST_3' | 'LAST_6' | 'SELECT_MONTH'
+type Filter = 'TODAY' | 'WEEK' | 'MONTH' | 'LAST_MONTH' | 'LAST_3' | 'LAST_6' | 'SELECT_MONTH'
 
 interface OwnerStaffAttendanceChartProps {
     staff: StaffUser[]
@@ -136,6 +136,10 @@ export function OwnerStaffAttendanceChart({ staff, logs }: OwnerStaffAttendanceC
         if (filter === 'TODAY') return { rangeStart: today, rangeEnd: today, subtitle: 'Today' }
         if (filter === 'WEEK') return { rangeStart: addDays(today, -6), rangeEnd: today, subtitle: 'This week' }
         if (filter === 'MONTH') return { rangeStart: `${today.slice(0, 7)}-01`, rangeEnd: today, subtitle: 'This month' }
+        if (filter === 'LAST_MONTH') {
+            const priorMonth = shiftMonthStart(today, -1).slice(0, 7)
+            return { rangeStart: `${priorMonth}-01`, rangeEnd: endOfMonthKey(priorMonth), subtitle: 'Last month' }
+        }
         if (filter === 'LAST_3') return { rangeStart: shiftMonthStart(today, -2), rangeEnd: today, subtitle: 'Last 3 months' }
         if (filter === 'LAST_6') return { rangeStart: shiftMonthStart(today, -5), rangeEnd: today, subtitle: 'Last 6 months' }
         return {
@@ -193,6 +197,7 @@ export function OwnerStaffAttendanceChart({ staff, logs }: OwnerStaffAttendanceC
                             <SelectItem value="TODAY" className="text-xs">Today</SelectItem>
                             <SelectItem value="WEEK" className="text-xs">This week</SelectItem>
                             <SelectItem value="MONTH" className="text-xs">This month</SelectItem>
+                            <SelectItem value="LAST_MONTH" className="text-xs">Last month</SelectItem>
                             <SelectItem value="LAST_3" className="text-xs">Last 3 months</SelectItem>
                             <SelectItem value="LAST_6" className="text-xs">Last 6 months</SelectItem>
                             <SelectItem value="SELECT_MONTH" className="text-xs">Select month</SelectItem>

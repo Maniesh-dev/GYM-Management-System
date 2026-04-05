@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { withRole } from '@/lib/withRole'
 import { prisma } from '@/lib/db'
 import { memberSchema } from '@/lib/validations/member.schema'
-import { addDays } from 'date-fns'
 
 type MemberStatus = 'ACTIVE' | 'EXPIRED' | 'FROZEN' | 'CANCELLED'
 
@@ -46,7 +45,7 @@ export const POST = withRole('members:write', async (req, { session }) => {
     if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
 
     const joinDate = new Date(parsed.data.joinDate)
-    const expiryDate = addDays(joinDate, plan.durationDays)
+    const expiryDate = new Date(parsed.data.joinDate) // Expired by default until payment is recorded
 
     const member = await prisma.member.create({
         data: {

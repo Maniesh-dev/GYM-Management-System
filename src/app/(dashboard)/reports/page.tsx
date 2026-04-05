@@ -5,6 +5,7 @@ import { RevenueChartWithFilter } from '@/components/reports/RevenueChartWithFil
 import { PlanPieChart } from '@/components/reports/PlanPieChart'
 import { MemberLifecycleTrendChart } from '@/components/reports/MemberLifecycleTrendChart'
 import { OwnerStaffAttendanceChart } from '@/components/reports/OwnerStaffAttendanceChart'
+import { MemberLifecycleTrendFilter } from '@/components/reports/MemberLifecycleTrendFilter'
 import Link from 'next/link'
 
 type AttendanceStaffRole = 'TRAINER' | 'RECEPTION'
@@ -18,7 +19,24 @@ function isAttendanceStaffRole(role: string): role is AttendanceStaffRole {
     return role === 'TRAINER' || role === 'RECEPTION'
 }
 
-export default async function ReportsPage() {
+export default async function ReportsPage(
+    props: {
+        searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+    }
+) {
+    const searchParams = props.searchParams ? await props.searchParams : {}
+    const filterParam = searchParams.memberMonths as string ?? '6'
+    const monthsParam = parseInt(filterParam, 10)
+    
+    let memberMonthsCount = 6;
+    if (filterParam === 'ALL') {
+        memberMonthsCount = 60;
+    } else if (!isNaN(monthsParam)) {
+        if (monthsParam === 0) memberMonthsCount = 1;
+        else if (monthsParam === 1) memberMonthsCount = 2;
+        else memberMonthsCount = Math.max(1, Math.min(monthsParam, 60));
+    }
+
     const session = await auth()
     const gymId = session!.user.gymId
     const isOwner = session!.user.role === 'OWNER'
@@ -29,8 +47,8 @@ export default async function ReportsPage() {
     const istMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     const missingCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
-    const trendMonths = Array.from({ length: 6 }, (_, idx) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1)
+    const trendMonths = Array.from({ length: memberMonthsCount }, (_, idx) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - ((memberMonthsCount - 1) - idx), 1)
         return {
             label: d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
             start: new Date(d.getFullYear(), d.getMonth(), 1),
@@ -259,9 +277,7 @@ export default async function ReportsPage() {
                         <h3 className="text-sm font-bold text-foreground opacity-80 uppercase tracking-tight">
                             Monthly Member Report
                         </h3>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-bold border border-emerald-100 dark:border-emerald-900/60">
-                            Last 6 months
-                        </span>
+                        <MemberLifecycleTrendFilter currentMonths={filterParam} />
                     </div>
                     <div className="h-[320px]">
                         <MemberLifecycleTrendChart data={monthlyMemberReport} />
