@@ -408,3 +408,4 @@ export function MemberTable({ members, trainers }: MemberTableProps) {
     </>
   )
 }
+

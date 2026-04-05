@@ -34,7 +34,7 @@ export default async function MemberProfilePage({
     })
 
     if (!member) notFound()
-
+    const fmtTime = (d: Date) => new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
     const STATUS_COLOR: Record<string, string> = {
         ACTIVE: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20',
         EXPIRED: 'text-rose-600 bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20',
@@ -156,7 +156,7 @@ export default async function MemberProfilePage({
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <span className="text-sm text-muted-foreground font-medium">
-                                            {new Date(c.checkedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                            {fmtTime(c.checkedAt)}
                                         </span>
                                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-widest border border-emerald-100 dark:border-emerald-500/20">
                                             {c.method}
