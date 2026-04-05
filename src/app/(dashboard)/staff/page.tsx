@@ -84,11 +84,12 @@ export default async function StaffPage() {
                             </div>
 
                             <div className="w-full sm:w-auto flex flex-col justify-center sm:block pt-4 sm:pt-0 border-t sm:border-t-0 border-border/50 gap-3">
-                                <TrainerQRCard qrToken={s.qrToken} name={s.name} />
+                                <TrainerQRCard staffId={s.id} qrToken={s.qrToken} name={s.name} />
                                 {session?.user?.role === 'OWNER' && (
                                     <div className="mt-3 flex justify-center sm:justify-end">
                                         <TerminateButton staffId={s.id} staffName={s.name} />
                                     </div>
+                                    
                                 )}
                             </div>
                         </div>

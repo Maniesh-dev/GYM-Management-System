@@ -75,6 +75,27 @@ export function MemberQRCard({
     win.print()
   }
 
+  async function share() {
+    try {
+      const res = await fetch(dataUrl)
+      const blob = await res.blob()
+      const file = new File([blob], `qr-${memberName.toLowerCase().replace(/\s+/g, '-')}.png`, { type: 'image/png' })
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `${memberName} QR Code`,
+          text: 'Scan at kiosk for gym entry',
+        })
+      } else {
+        alert('Sharing is not supported on this device/browser.')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Failed to share')
+    }
+  }
+
   if (loading) {
     return (
       <div style={{
@@ -154,6 +175,9 @@ export function MemberQRCard({
         </button>
         <button onClick={print} style={btnStyle}>
           Print
+        </button>
+        <button onClick={share} style={btnStyle}>
+          Share
         </button>
         <button
           onClick={regenerate}
