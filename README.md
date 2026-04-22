@@ -2,6 +2,8 @@
 
 A comprehensive, role-based gym management solution built with modern web technologies to streamline operations, member tracking, and trainer management.
 
+**Live Site:** [https://fightclub.manieshsanwal.in](https://fightclub.manieshsanwal.in)
+
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge)](https://fightclub.manieshsanwal.in)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
